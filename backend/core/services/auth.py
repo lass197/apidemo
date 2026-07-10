@@ -48,15 +48,20 @@ def _store_refresh_token(user: User, raw_token: str) -> RefreshToken:
 
 
 def _log_login(user: User | None, username: str, status: str, reason: str = ""):
-    request = get_current_request()
-    LoginLog.objects.create(
-        user=user,
-        username_attempt=username,
-        status=status,
-        ip_address=get_client_ip(request) if request else None,
-        user_agent=(request.META.get("HTTP_USER_AGENT", "")[:255] if request else ""),
-        failure_reason=reason,
-    )
+    try:
+        request = get_current_request()
+        LoginLog.objects.create(
+            user=user,
+            username_attempt=username,
+            status=status,
+            ip_address=get_client_ip(request) if request else None,
+            user_agent=(request.META.get("HTTP_USER_AGENT", "")[:255] if request else ""),
+            failure_reason=reason,
+        )
+    except Exception:
+        # Ne jamais faire échouer le login à cause d'un log
+        pass
+
 
 
 def login(username: str, password: str, mfa_code: str | None = None) -> dict:
@@ -105,9 +110,13 @@ def login(username: str, password: str, mfa_code: str | None = None) -> dict:
 
     request = get_current_request()
     if request:
-        user.last_login_ip = get_client_ip(request)
-        user.last_seen_at = django_tz.now()
-        user.save(update_fields=["last_login_ip", "last_seen_at"])
+        try:
+            user.last_login_ip = get_client_ip(request)
+            user.last_seen_at = django_tz.now()
+            user.save(update_fields=["last_login_ip", "last_seen_at"])
+        except Exception:
+            user.last_seen_at = django_tz.now()
+            user.save(update_fields=["last_seen_at"])
 
     access = _create_access_token(user)
     refresh_raw = _create_refresh_token_string()

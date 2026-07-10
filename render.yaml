@@ -35,11 +35,7 @@ services:
         fromDatabase:
           name: sghl-db
           property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: sghl-redis
-          property: connectionString
+      # LocMem suffit sur free tier ; Redis optionnel (évite 500 login si KV inaccessible)
       - key: EMAIL_HOST
         sync: false
       - key: EMAIL_HOST_USER
