@@ -85,16 +85,26 @@ WSGI_APPLICATION = "apidemo.wsgi.application"
 
 def _database_from_url(url: str) -> dict:
     """Parse DATABASE_URL (Render Postgres / Heroku-style)."""
+    # django.db attend postgresql:// ; Render fournit parfois postgres://
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://") :]
     parsed = urlparse(url)
+    sslmode = os.getenv("DB_SSLMODE", "require")
+    # Respecter ?sslmode= déjà présent dans l'URL Render
+    from urllib.parse import parse_qs
+
+    qs = parse_qs(parsed.query or "")
+    if qs.get("sslmode"):
+        sslmode = qs["sslmode"][0]
     return {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": (parsed.path or "/").lstrip("/") or "sghl",
+        "NAME": unquote((parsed.path or "/").lstrip("/")) or "sghl",
         "USER": unquote(parsed.username or ""),
         "PASSWORD": unquote(parsed.password or ""),
         "HOST": parsed.hostname or "",
         "PORT": str(parsed.port or 5432),
         "CONN_MAX_AGE": 60,
-        "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "require")},
+        "OPTIONS": {"sslmode": sslmode},
     }
 
 

@@ -1,5 +1,8 @@
 # Blueprint Render — SGHL (free tier + sous-domaine *.onrender.com)
 # Dashboard : New → Blueprint → connecter le dépôt GitHub
+#
+# IMPORTANT : web + Postgres doivent être dans la MÊME région
+# (sinon DATABASE_URL interne ne fonctionne pas → login 500).
 
 services:
   - type: web
@@ -13,29 +16,24 @@ services:
     envVars:
       - key: DEBUG
         value: "False"
-      # Render termine déjà le TLS ; éviter les boucles sur les health checks HTTP
       - key: SECURE_SSL_REDIRECT
         value: "False"
       - key: DB_SSLMODE
         value: "require"
       - key: SECRET_KEY
         generateValue: true
-      # Générer : python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
       - key: FIELD_ENCRYPTION_KEY
         sync: false
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost"
-      # Free tier ~512 Mo : 1 worker suffit
       - key: WEB_CONCURRENCY
         value: "1"
-      # Seed démo au premier démarrage (free tier n'a pas de preDeploy/initialDeployHook)
       - key: SEED_ON_BOOT
         value: "true"
       - key: DATABASE_URL
         fromDatabase:
           name: sghl-db
           property: connectionString
-      # LocMem suffit sur free tier ; Redis optionnel (évite 500 login si KV inaccessible)
       - key: EMAIL_HOST
         sync: false
       - key: EMAIL_HOST_USER
@@ -45,15 +43,13 @@ services:
       - key: DEFAULT_FROM_EMAIL
         sync: false
 
-  - type: keyvalue
-    name: sghl-redis
-    plan: free
-    ipAllowList: []
-    maxmemoryPolicy: allkeys-lru
-
 databases:
   - name: sghl-db
     plan: free
+    region: frankfurt
     databaseName: sghl
     user: sghl
-    ipAllowList: []
+    # Autoriser aussi l'URL externe si besoin de debug
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
