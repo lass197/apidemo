@@ -50,6 +50,9 @@ py -3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().de
 
 6. Renseigner optionnellement les variables email (SMTP) si demandées
 
+> **Free tier** : `preDeployCommand` n’est pas supporté. Les migrations et le seed démo
+> s’exécutent au démarrage du conteneur (`scripts/render-entrypoint.sh`, `SEED_ON_BOOT=true`).
+
 URL publique : `https://sghl-web.onrender.com` (ou le nom choisi).
 
 ### 3. Après le premier déploiement
