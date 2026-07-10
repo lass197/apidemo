@@ -9,13 +9,15 @@ services:
     region: frankfurt
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    healthCheckPath: /api/v1/docs
+    healthCheckPath: /api/v1/sante/
     envVars:
       - key: DEBUG
         value: "False"
       # Render termine déjà le TLS ; éviter les boucles sur les health checks HTTP
       - key: SECURE_SSL_REDIRECT
         value: "False"
+      - key: DB_SSLMODE
+        value: "require"
       - key: SECRET_KEY
         generateValue: true
       # Générer : python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
@@ -23,8 +25,9 @@ services:
         sync: false
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost"
+      # Free tier ~512 Mo : 1 worker suffit
       - key: WEB_CONCURRENCY
-        value: "2"
+        value: "1"
       # Seed démo au premier démarrage (free tier n'a pas de preDeploy/initialDeployHook)
       - key: SEED_ON_BOOT
         value: "true"
