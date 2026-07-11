@@ -83,10 +83,17 @@ def resend_patient_otp(request, payload: ResendOtpIn):
 
 @router.post("/login/", response=TokenOut)
 def auth_login(request, payload: LoginIn):
+    from django.db import OperationalError
+
     try:
         return login(payload.username, payload.password, payload.mfa_code)
     except ValueError as exc:
         raise HttpError(401, str(exc)) from exc
+    except OperationalError as exc:
+        raise HttpError(
+            503,
+            "Base de données indisponible. Réessayez dans une minute ou vérifiez DATABASE_URL sur Render.",
+        ) from exc
 
 
 @router.post("/refresh/", response=RefreshOut)

@@ -92,6 +92,8 @@ class HealthOut(Schema):
     version: str
     database: str
     timestamp: datetime
+    engine: str = "unknown"
+    detail: str = ""
 
 
 class ErrorOut(Schema):
