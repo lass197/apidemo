@@ -83,6 +83,22 @@ TEMPLATES = [
 WSGI_APPLICATION = "apidemo.wsgi.application"
 
 
+def _render_external_host(hostname: str) -> str:
+    """Convertit le hostname interne Render (dpg-xxx-a) en FQDN externe.
+
+    L'URL interne ne résout pas si web et DB ne sont pas sur le même réseau privé.
+    L'URL externe (*.REGION-postgres.render.com) fonctionne partout avec SSL.
+    """
+    import re
+
+    if not hostname or "." in hostname:
+        return hostname
+    if re.fullmatch(r"dpg-[a-z0-9]+(?:-[a-z0-9]+)*", hostname):
+        region = (os.getenv("RENDER_DB_REGION") or "oregon").strip() or "oregon"
+        return f"{hostname}.{region}-postgres.render.com"
+    return hostname
+
+
 def _database_from_url(url: str) -> dict:
     """Parse DATABASE_URL (Render Postgres / Heroku-style)."""
     # django.db attend postgresql:// ; Render fournit parfois postgres://
@@ -90,18 +106,23 @@ def _database_from_url(url: str) -> dict:
         url = "postgresql://" + url[len("postgres://") :]
     parsed = urlparse(url)
     sslmode = os.getenv("DB_SSLMODE", "require")
-    # Respecter ?sslmode= déjà présent dans l'URL Render
     from urllib.parse import parse_qs
 
     qs = parse_qs(parsed.query or "")
     if qs.get("sslmode"):
         sslmode = qs["sslmode"][0]
+
+    host = _render_external_host(parsed.hostname or "")
+    # Forcer SSL dès qu'on passe par le hostname externe Render
+    if host.endswith("-postgres.render.com"):
+        sslmode = os.getenv("DB_SSLMODE", "require")
+
     return {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": unquote((parsed.path or "/").lstrip("/")) or "sghl",
         "USER": unquote(parsed.username or ""),
         "PASSWORD": unquote(parsed.password or ""),
-        "HOST": parsed.hostname or "",
+        "HOST": host,
         "PORT": str(parsed.port or 5432),
         "CONN_MAX_AGE": 60,
         "OPTIONS": {"sslmode": sslmode},
@@ -109,18 +130,20 @@ def _database_from_url(url: str) -> dict:
 
 
 _database_url = os.getenv("DATABASE_URL", "").strip()
-if _database_url:
+_use_sqlite = os.getenv("USE_SQLITE", "false").lower() in ("true", "1", "yes")
+if _database_url and not _use_sqlite:
     DATABASES = {"default": _database_from_url(_database_url)}
-elif os.getenv("DB_ENGINE", "sqlite") == "postgresql":
+elif os.getenv("DB_ENGINE", "sqlite") == "postgresql" and not _use_sqlite:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.getenv("DB_NAME", "sghl"),
             "USER": os.getenv("DB_USER", "sghl"),
             "PASSWORD": os.getenv("DB_PASSWORD", "sghl"),
-            "HOST": os.getenv("DB_HOST", "localhost"),
+            "HOST": _render_external_host(os.getenv("DB_HOST", "localhost")),
             "PORT": os.getenv("DB_PORT", "5432"),
             "CONN_MAX_AGE": 60,
+            "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "prefer")},
         }
     }
 else:

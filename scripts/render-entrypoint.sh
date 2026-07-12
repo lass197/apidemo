@@ -2,34 +2,21 @@
 set -e
 cd /app/backend
 
-# Free tier : Postgres interne souvent inaccessible (région / DNS).
-# USE_SQLITE=true → ignore DATABASE_URL et démarre immédiatement.
-if [ "${USE_SQLITE:-false}" = "true" ]; then
-  echo "USE_SQLITE=true — démarrage avec SQLite (démo)."
-  unset DATABASE_URL
-  export DB_ENGINE=sqlite
-  python manage.py migrate --noinput
-else
-  migrated=0
-  i=0
-  max_tries=3
-  while [ "$i" -lt "$max_tries" ]; do
-    if python manage.py migrate --noinput; then
-      migrated=1
-      break
-    fi
-    i=$((i + 1))
-    echo "Migration en attente de Postgres ($i/$max_tries)..."
-    sleep 2
-  done
-
-  if [ "$migrated" -ne 1 ]; then
-    echo "WARN: Postgres inaccessible — bascule SQLite pour la démo."
-    unset DATABASE_URL
-    export DB_ENGINE=sqlite
-    python manage.py migrate --noinput
+# Postgres uniquement (pas de bascule SQLite).
+# L'URL interne dpg-* est convertie en FQDN externe dans settings.py.
+echo "Démarrage avec PostgreSQL..."
+i=0
+max_tries=20
+until python manage.py migrate --noinput; do
+  i=$((i + 1))
+  if [ "$i" -ge "$max_tries" ]; then
+    echo "ERREUR: impossible de joindre PostgreSQL après $max_tries tentatives."
+    echo "Vérifiez DATABASE_URL (External Database URL) et RENDER_DB_REGION (oregon|frankfurt)."
+    exit 1
   fi
-fi
+  echo "Migration en attente de Postgres ($i/$max_tries)..."
+  sleep 3
+done
 
 if [ "${SEED_ON_BOOT:-false}" = "true" ]; then
   python manage.py seed_sghl || echo "Seed SGHL ignoré/échoué."

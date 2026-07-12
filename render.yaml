@@ -1,14 +1,15 @@
-# Blueprint Render — SGHL (free tier + sous-domaine *.onrender.com)
+# Blueprint Render — SGHL (PostgreSQL free tier)
 #
-# Sur free tier, le hostname Postgres interne (dpg-...) échoue souvent
-# ("Name or service not known"). On utilise SQLite + seed pour la démo.
+# Le hostname interne dpg-* est réécrit en
+# dpg-*.{RENDER_DB_REGION}-postgres.render.com (SSL) pour éviter
+# "could not translate host name".
 
 services:
   - type: web
     name: sghl-web
     runtime: docker
     plan: free
-    region: frankfurt
+    region: oregon
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/v1/sante/
@@ -17,6 +18,12 @@ services:
         value: "False"
       - key: SECURE_SSL_REDIRECT
         value: "False"
+      - key: DB_SSLMODE
+        value: "require"
+      # Région de la base existante (voir Dashboard → sghl-db → Info)
+      # Valeurs courantes : oregon | frankfurt
+      - key: RENDER_DB_REGION
+        value: "oregon"
       - key: SECRET_KEY
         generateValue: true
       - key: FIELD_ENCRYPTION_KEY
@@ -27,9 +34,12 @@ services:
         value: "1"
       - key: SEED_ON_BOOT
         value: "true"
-      # Contourne l'erreur DNS Postgres interne sur free tier
       - key: USE_SQLITE
-        value: "true"
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sghl-db
+          property: connectionString
       - key: EMAIL_HOST
         sync: false
       - key: EMAIL_HOST_USER
@@ -42,7 +52,7 @@ services:
 databases:
   - name: sghl-db
     plan: free
-    region: frankfurt
+    region: oregon
     databaseName: sghl
     user: sghl
     ipAllowList:
