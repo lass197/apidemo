@@ -13,7 +13,6 @@ if [ -z "${DATABASE_URL:-}" ]; then
   exit 1
 fi
 
-# Afficher le host (sans mot de passe) pour le debug
 python - <<'PY'
 import os
 from urllib.parse import urlparse
@@ -24,7 +23,6 @@ print(f"DATABASE_URL host brut: {p.hostname!r} db={ (p.path or '/').lstrip('/')!
 PY
 
 migrate_ok=0
-# Essayer la région demandée puis oregon/frankfurt (hostname externe Render)
 regions=""
 if [ -n "${RENDER_DB_REGION:-}" ]; then
   regions="$RENDER_DB_REGION"
@@ -51,17 +49,22 @@ if [ "$migrate_ok" -ne 1 ]; then
   echo "================================================================"
   echo "FATAL: PostgreSQL inaccessible."
   echo "Collez l'External Database URL complète (pas l'Internal) dans DATABASE_URL."
-  echo "Dashboard → sghl-db → Connect → External Database URL"
   echo "================================================================"
   exit 1
 fi
 
+# Seed EN ARRIÈRE-PLAN : ne doit jamais bloquer l'ouverture du port (sinon timeout Render)
 if [ "${SEED_ON_BOOT:-false}" = "true" ]; then
-  python manage.py seed_sghl || echo "Seed SGHL ignoré/échoué."
+  echo "Seed SGHL lancé en arrière-plan..."
+  (python manage.py seed_sghl && echo "Seed SGHL terminé.") \
+    || echo "Seed SGHL ignoré/échoué." &
 fi
 
 PORT="${PORT:-8000}"
+echo "Démarrage gunicorn sur 0.0.0.0:${PORT}"
 exec gunicorn apidemo.wsgi:application \
   --bind "0.0.0.0:${PORT}" \
   --workers "${WEB_CONCURRENCY:-1}" \
-  --timeout 120
+  --timeout 120 \
+  --access-logfile - \
+  --error-logfile -
