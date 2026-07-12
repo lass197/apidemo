@@ -157,20 +157,34 @@ PUBLIC_SITE_URL = os.getenv(
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-if os.getenv("REDIS_URL"):
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": os.getenv("REDIS_URL"),
-        }
-    }
-else:
-    CACHES = {
+
+def _configure_caches() -> dict:
+    """Redis si joignable, sinon LocMem (évite les 500 dashboard sur Render free)."""
+    redis_url = (os.getenv("REDIS_URL") or "").strip()
+    if redis_url:
+        try:
+            from redis import Redis
+
+            client = Redis.from_url(redis_url, socket_connect_timeout=1, socket_timeout=1)
+            client.ping()
+            client.close()
+            return {
+                "default": {
+                    "BACKEND": "django.core.cache.backends.redis.RedisCache",
+                    "LOCATION": redis_url,
+                }
+            }
+        except Exception:
+            pass
+    return {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
             "LOCATION": "sghl-cache",
         }
     }
+
+
+CACHES = _configure_caches()
 
 CORS_ALLOWED_ORIGINS = [
     o.strip()

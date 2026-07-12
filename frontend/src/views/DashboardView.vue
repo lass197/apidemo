@@ -34,7 +34,7 @@ onMounted(async () => {
 
     <AlertBanner v-else-if="error" type="error" title="Erreur de chargement">
       {{ error }}
-      <p class="mt-2 opacity-80">Vérifiez que le backend tourne sur le port 8000.</p>
+      <p class="mt-2 opacity-80">Réessayez dans un instant. Si le problème continue, rechargez la page.</p>
     </AlertBanner>
 
     <div v-else-if="kpis" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">

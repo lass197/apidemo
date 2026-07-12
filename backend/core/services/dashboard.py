@@ -2,7 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.core.cache import cache
-from django.db.models import Count, Q, Sum
+from django.db.models import Sum
 from django.utils import timezone
 
 from billing.models import Invoice
@@ -11,10 +11,25 @@ from laboratory.models import LabOrder
 
 
 CACHE_TTL = 60
+CACHE_KEY = "sghl_dashboard_kpis"
+
+
+def _cache_get(key):
+    try:
+        return cache.get(key)
+    except Exception:
+        return None
+
+
+def _cache_set(key, value, ttl):
+    try:
+        cache.set(key, value, ttl)
+    except Exception:
+        pass
 
 
 def get_dashboard_kpis() -> dict:
-    cached = cache.get("sghl_dashboard_kpis")
+    cached = _cache_get(CACHE_KEY)
     if cached:
         return cached
 
@@ -46,9 +61,12 @@ def get_dashboard_kpis() -> dict:
         "active_hospitalizations": active_hospitalizations,
         "generated_at": timezone.now().isoformat(),
     }
-    cache.set("sghl_dashboard_kpis", kpis, CACHE_TTL)
+    _cache_set(CACHE_KEY, kpis, CACHE_TTL)
     return kpis
 
 
 def invalidate_dashboard_cache():
-    cache.delete("sghl_dashboard_kpis")
+    try:
+        cache.delete(CACHE_KEY)
+    except Exception:
+        pass

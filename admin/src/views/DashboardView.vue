@@ -5,11 +5,14 @@ import PageHeader from '../components/PageHeader.vue'
 
 const stats = ref(null)
 const loading = ref(true)
+const error = ref('')
 
 onMounted(async () => {
   try {
     const { data } = await api.get('/stats/')
     stats.value = data
+  } catch (e) {
+    error.value = e.response?.data?.detail || 'Impossible de charger le tableau de bord.'
   } finally {
     loading.value = false
   }
@@ -21,6 +24,7 @@ onMounted(async () => {
     <PageHeader title="Administration SGHL" subtitle="Console système — gestion, audit et infrastructure" />
 
     <div v-if="loading" class="card p-10 text-center text-slate-500">Chargement…</div>
+    <div v-else-if="error" class="card p-6 text-red-700 bg-red-50 border border-red-100">{{ error }}</div>
 
     <template v-else-if="stats">
       <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
