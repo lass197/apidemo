@@ -7,23 +7,32 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+SMTP_TIMEOUT_SECONDS = 8
+
+
+def smtp_configured() -> bool:
+    """True seulement si host + identifiants sont présents."""
+    host = (getattr(settings, "EMAIL_HOST", "") or "").strip()
+    user = (getattr(settings, "EMAIL_HOST_USER", "") or "").strip()
+    password = (getattr(settings, "EMAIL_HOST_PASSWORD", "") or "").strip()
+    return bool(host and user and password)
+
 
 def send_email(to: str, subject: str, body: str) -> bool:
-    """Envoie un email via SMTP (Gmail) si configuré."""
-    host = getattr(settings, "EMAIL_HOST", "")
-    if not host or not to:
-        logger.info("Email non envoyé (SMTP non configuré): %s → %s\n%s", subject, to, body[:200])
+    """Envoie un email via SMTP si configuré (timeout court pour éviter les 502 Render)."""
+    if not smtp_configured() or not to:
+        logger.info("Email non envoyé (SMTP non configuré): %s → %s", subject, to)
         return False
+    host = settings.EMAIL_HOST.strip()
     try:
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = subject
-        msg["From"] = settings.DEFAULT_FROM_EMAIL
+        msg["From"] = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
         msg["To"] = to
-        with smtplib.SMTP(host, settings.EMAIL_PORT) as server:
+        with smtplib.SMTP(host, settings.EMAIL_PORT, timeout=SMTP_TIMEOUT_SECONDS) as server:
             if settings.EMAIL_USE_TLS:
                 server.starttls()
-            if settings.EMAIL_HOST_USER:
-                server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
             server.send_message(msg)
         return True
     except Exception as exc:
@@ -32,7 +41,7 @@ def send_email(to: str, subject: str, body: str) -> bool:
 
 
 def enqueue_email(to: str, subject: str, body: str) -> None:
-    """Envoi email asynchrone (thread daemon) pour ne pas bloquer la requête HTTP."""
+    """Envoi email asynchrone (ne bloque jamais la requête HTTP)."""
     thread = threading.Thread(
         target=send_email,
         args=(to, subject, body),

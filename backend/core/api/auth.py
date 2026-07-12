@@ -45,11 +45,13 @@ def register_patient_account(request, payload: PatientRegisterIn):
             phone=payload.phone,
             username=payload.username,
         )
+        code, otp_sent = issue_registration_otp(user)
     except ValueError as exc:
         raise HttpError(400, str(exc)) from exc
+    except Exception as exc:
+        raise HttpError(500, f"Inscription impossible: {exc}") from exc
 
-    code, otp_sent = issue_registration_otp(user)
-    payload_out = {
+    return {
         "detail": (
             "Compte créé. Saisissez le code à 6 chiffres reçu par email."
             if otp_sent
@@ -60,7 +62,6 @@ def register_patient_account(request, payload: PatientRegisterIn):
         "otp_sent": otp_sent,
         "otp_dev_code": None if otp_sent else code,
     }
-    return payload_out
 
 
 @router.post("/register/patient/verify-otp/", response=TokenOut)

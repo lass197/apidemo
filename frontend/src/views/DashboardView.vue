@@ -17,6 +17,10 @@ onMounted(async () => {
     kpis.value = data
   } catch (e) {
     error.value = e.response?.data?.detail || 'Impossible de charger les indicateurs.'
+    // 502 Render : service endormi / crash — message clair
+    if (e.response?.status === 502 || e.code === 'ERR_NETWORK') {
+      error.value = 'Le serveur est temporairement indisponible (502). Attendez 30–60 s puis réessayez.'
+    }
   } finally {
     loading.value = false
   }

@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from core.models import EmailOTP, Role, User
-from core.services.email_service import send_email
+from core.services.email_service import enqueue_email, smtp_configured
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,11 @@ def issue_registration_otp(user: User) -> tuple[str, bool]:
         f"Ne le partagez avec personne.\n\n"
         f"— Centre Hospitalier SGHL"
     )
-    sent = send_email(user.email, "SGHL — Code de vérification (6 chiffres)", body)
-    logger.info("OTP inscription pour %s (envoyé=%s, code_dev=%s)", user.email, sent, code)
+    # Jamais bloquer la requête HTTP (sinon 502 sur Render free tier)
+    sent = smtp_configured()
+    if sent:
+        enqueue_email(user.email, "SGHL — Code de vérification (6 chiffres)", body)
+    logger.info("OTP inscription pour %s (smtp=%s, code_dev=%s)", user.email, sent, code)
     return code, sent
 
 

@@ -108,8 +108,12 @@ async function submitRegister() {
     step.value = 2
   } catch (e) {
     const detail = apiErrorDetail(e, 'Inscription impossible.')
-    fieldErrors.value = { ...fieldErrors.value, ...mapApiErrorToFields(detail) }
-    error.value = Object.keys(mapApiErrorToFields(detail)).length ? 'Corrigez les champs signalés ci-dessous.' : detail
+    if (e.response?.status === 502 || e.code === 'ERR_NETWORK') {
+      error.value = 'Serveur indisponible (502). Attendez une minute (démarrage Render) puis réessayez.'
+    } else {
+      fieldErrors.value = { ...fieldErrors.value, ...mapApiErrorToFields(detail) }
+      error.value = Object.keys(mapApiErrorToFields(detail)).length ? 'Corrigez les champs signalés ci-dessous.' : detail
+    }
   } finally {
     loading.value = false
   }
