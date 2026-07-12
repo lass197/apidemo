@@ -130,10 +130,10 @@ def _database_from_url(url: str) -> dict:
 
 
 _database_url = os.getenv("DATABASE_URL", "").strip()
-_use_sqlite = os.getenv("USE_SQLITE", "false").lower() in ("true", "1", "yes")
-if _database_url and not _use_sqlite:
+# Toujours PostgreSQL si DATABASE_URL est fourni (ignorer USE_SQLITE).
+if _database_url:
     DATABASES = {"default": _database_from_url(_database_url)}
-elif os.getenv("DB_ENGINE", "sqlite") == "postgresql" and not _use_sqlite:
+elif os.getenv("DB_ENGINE", "sqlite") == "postgresql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -147,6 +147,7 @@ elif os.getenv("DB_ENGINE", "sqlite") == "postgresql" and not _use_sqlite:
         }
     }
 else:
+    # SQLite uniquement en local (pas de DATABASE_URL)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",

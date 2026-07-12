@@ -102,6 +102,8 @@ class HealthOut(Schema):
     timestamp: datetime
     engine: str = "unknown"
     detail: str = ""
+    has_database_url: bool = False
+    db_host: str = ""
 
 
 class ErrorOut(Schema):

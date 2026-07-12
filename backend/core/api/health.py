@@ -12,18 +12,23 @@ router = Router(tags=["Santé"])
 
 @router.get("/sante/", response=HealthOut)
 def health_check(request):
-    engine = settings.DATABASES.get("default", {}).get("ENGINE", "")
+    db_conf = settings.DATABASES.get("default", {})
+    engine = db_conf.get("ENGINE", "")
     engine_label = "postgresql" if "postgresql" in engine else "sqlite" if "sqlite" in engine else engine
+    has_url = bool(os.getenv("DATABASE_URL", "").strip())
+    db_host = str(db_conf.get("HOST") or "")
     detail = ""
     db_ok = True
     try:
         connection.ensure_connection()
     except Exception as exc:
         db_ok = False
-        # Message utile sans fuite de mot de passe
         detail = str(exc).split("\n")[0][:200]
-        if not os.getenv("DATABASE_URL", "").strip() and "postgresql" in engine:
-            detail = "DATABASE_URL manquant — configurez l'URL Postgres dans Render."
+        if not has_url and engine_label != "sqlite":
+            detail = "DATABASE_URL manquant — collez l'External Database URL dans Render."
+
+    if db_ok and engine_label == "sqlite" and os.getenv("RENDER"):
+        detail = "SQLite actif : ajoutez DATABASE_URL (External Database URL) et redéployez."
 
     return {
         "status": "ok" if db_ok else "degraded",
@@ -32,4 +37,6 @@ def health_check(request):
         "timestamp": datetime.now(timezone.utc),
         "engine": engine_label,
         "detail": detail,
+        "has_database_url": has_url,
+        "db_host": db_host,
     }
