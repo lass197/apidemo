@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _step = 2;
         _challengeId = (data['challenge_id'] as String?) ?? '';
         _otpDevCode = (data['otp_dev_code'] as String?) ?? '';
-        _otpCode.text = _otpDevCode;
+        _otpCode.clear();
         _loading = false;
       });
       return;
@@ -192,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Non envoyé par email — saisissez-le ci-dessous',
+                              'Saisissez ce code ci-dessous pour confirmer votre connexion.',
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                             ),

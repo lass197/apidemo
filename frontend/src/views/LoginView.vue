@@ -67,7 +67,7 @@ async function submit() {
       if (data.requires_otp) {
         challengeId.value = data.challenge_id
         otpDevCode.value = data.otp_dev_code || ''
-        loginOtp.value = data.otp_dev_code || ''
+        loginOtp.value = ''
         step.value = 2
         return
       }
@@ -134,7 +134,7 @@ function backToCredentials() {
       <form @submit.prevent="submit" class="card p-8 shadow-2xl shadow-black/20">
         <AlertBanner v-if="otpDevCode && isPatient && step === 2" type="success" class="mb-4" title="Code de connexion">
           <p class="text-center font-mono text-3xl tracking-[0.35em] font-bold mt-1">{{ otpDevCode }}</p>
-          <p class="text-xs mt-2 opacity-80">Ce code n’est pas envoyé par email — saisissez-le ci-dessous.</p>
+          <p class="text-sm mt-2 text-center">Saisissez ce code ci-dessous pour confirmer votre connexion.</p>
         </AlertBanner>
 
         <AlertBanner v-if="error" type="error" class="mb-4">{{ error }}</AlertBanner>
