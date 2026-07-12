@@ -22,6 +22,8 @@ const loading = ref(false)
 const error = ref('')
 const fieldErrors = ref({})
 const pendingEmail = ref('')
+const otpDevCode = ref('')
+const otpSent = ref(false)
 
 const form = ref({
   email: '',
@@ -100,6 +102,9 @@ async function submitRegister() {
 
     const { data } = await api.post('/auth/register/patient/', payload)
     pendingEmail.value = data.email
+    otpSent.value = !!data.otp_sent
+    otpDevCode.value = data.otp_dev_code || ''
+    if (otpDevCode.value) form.value.otpCode = otpDevCode.value
     step.value = 2
   } catch (e) {
     const detail = apiErrorDetail(e, 'Inscription impossible.')
@@ -140,9 +145,12 @@ async function resendOtp() {
   error.value = ''
   loading.value = true
   try {
-    await api.post('/auth/register/patient/resend-otp/', { email: pendingEmail.value })
+    const { data } = await api.post('/auth/register/patient/resend-otp/', { email: pendingEmail.value })
+    otpSent.value = !!data.otp_sent
+    otpDevCode.value = data.otp_dev_code || ''
+    if (otpDevCode.value) form.value.otpCode = otpDevCode.value
     error.value = ''
-    alert('Un nouveau code a été envoyé.')
+    alert(data.detail || (otpDevCode.value ? `Nouveau code : ${otpDevCode.value}` : 'Un nouveau code a été envoyé.'))
   } catch (e) {
     error.value = apiErrorDetail(e, 'Renvoi impossible.')
   } finally {
@@ -219,9 +227,20 @@ async function resendOtp() {
 
       <form v-else @submit.prevent="verifyOtp" class="card p-6 sm:p-8 shadow-2xl space-y-4">
         <AlertBanner v-if="error" type="error">{{ error }}</AlertBanner>
+        <AlertBanner v-if="otpDevCode" type="success">
+          Mode démo : aucun email SMTP configuré. Votre code est
+          <strong class="font-mono text-lg tracking-widest">{{ otpDevCode }}</strong>
+        </AlertBanner>
         <div class="text-center py-2">
           <span class="text-4xl">📧</span>
-          <p class="text-sm text-slate-600 mt-3">Entrez le code à <strong>6 chiffres</strong> reçu par email pour activer votre compte.</p>
+          <p class="text-sm text-slate-600 mt-3">
+            <template v-if="otpSent">
+              Entrez le code à <strong>6 chiffres</strong> reçu par email pour activer votre compte.
+            </template>
+            <template v-else>
+              Entrez le code à <strong>6 chiffres</strong> affiché ci-dessus pour activer votre compte.
+            </template>
+          </p>
         </div>
         <FormField label="Code de vérification" required>
           <input

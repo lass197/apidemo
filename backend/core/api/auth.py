@@ -14,6 +14,7 @@ from core.schemas import (
     RefreshOut,
     RegisterPendingOut,
     ResendOtpIn,
+    ResendOtpOut,
     TokenOut,
     VerifyEmailOtpIn,
 )
@@ -47,13 +48,19 @@ def register_patient_account(request, payload: PatientRegisterIn):
     except ValueError as exc:
         raise HttpError(400, str(exc)) from exc
 
-    otp_sent = bool(issue_registration_otp(user))
-    return {
-        "detail": "Compte créé. Saisissez le code à 6 chiffres reçu par email.",
+    code, otp_sent = issue_registration_otp(user)
+    payload_out = {
+        "detail": (
+            "Compte créé. Saisissez le code à 6 chiffres reçu par email."
+            if otp_sent
+            else "Compte créé. L'email n'est pas configuré sur le serveur : utilisez le code affiché ci-dessous."
+        ),
         "email": user.email,
         "user_id": user.id,
         "otp_sent": otp_sent,
+        "otp_dev_code": None if otp_sent else code,
     }
+    return payload_out
 
 
 @router.post("/register/patient/verify-otp/", response=TokenOut)
@@ -69,16 +76,24 @@ def verify_patient_registration(request, payload: VerifyEmailOtpIn):
         raise HttpError(400, str(exc)) from exc
 
 
-@router.post("/register/patient/resend-otp/", response=MessageOut)
+@router.post("/register/patient/resend-otp/", response=ResendOtpOut)
 def resend_patient_otp(request, payload: ResendOtpIn):
     ip = get_client_ip(request) or "unknown"
     if is_rate_limited(f"resend-otp:{ip}", limit=5, window=3600):
         raise HttpError(429, "Trop de demandes. Réessayez plus tard.")
     try:
-        resend_registration_otp(payload.email)
+        _user, code, otp_sent = resend_registration_otp(payload.email)
     except ValueError as exc:
         raise HttpError(400, str(exc)) from exc
-    return {"detail": "Un nouveau code a été envoyé par email."}
+    return {
+        "detail": (
+            "Un nouveau code a été envoyé par email."
+            if otp_sent
+            else "SMTP non configuré : utilisez le nouveau code affiché."
+        ),
+        "otp_sent": otp_sent,
+        "otp_dev_code": None if otp_sent else code,
+    }
 
 
 @router.post("/login/", response=TokenOut)

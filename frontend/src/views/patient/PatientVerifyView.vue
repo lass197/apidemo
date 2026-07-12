@@ -18,6 +18,8 @@ const email = ref('')
 const otpCode = ref('')
 const password = ref('')
 
+const otpDevCode = ref('')
+
 function validateEmailField() {
   const msg = validators.email(email.value, true)
   fieldErrors.value = msg ? { email: msg } : {}
@@ -27,14 +29,21 @@ function validateEmailField() {
 async function resend() {
   error.value = ''
   success.value = ''
+  otpDevCode.value = ''
   if (!validateEmailField()) {
     error.value = 'Corrigez l\'email ci-dessous.'
     return
   }
   loading.value = true
   try {
-    await api.post('/auth/register/patient/resend-otp/', { email: email.value.trim().toLowerCase() })
-    success.value = 'Un nouveau code a été envoyé. Vérifiez votre boîte mail (et les spams).'
+    const { data } = await api.post('/auth/register/patient/resend-otp/', { email: email.value.trim().toLowerCase() })
+    if (data.otp_dev_code) {
+      otpDevCode.value = data.otp_dev_code
+      otpCode.value = data.otp_dev_code
+      success.value = `Mode démo — code : ${data.otp_dev_code}`
+    } else {
+      success.value = 'Un nouveau code a été envoyé. Vérifiez votre boîte mail (et les spams).'
+    }
   } catch (e) {
     const detail = apiErrorDetail(e, 'Envoi impossible.')
     fieldErrors.value = { ...fieldErrors.value, ...mapApiErrorToFields(detail) }
@@ -91,6 +100,9 @@ async function verify() {
       <form @submit.prevent="verify" class="card p-6 sm:p-8 shadow-2xl space-y-4">
         <AlertBanner v-if="error" type="error">{{ error }}</AlertBanner>
         <AlertBanner v-if="success" type="success">{{ success }}</AlertBanner>
+        <AlertBanner v-if="otpDevCode" type="success">
+          Code démo : <strong class="font-mono tracking-widest">{{ otpDevCode }}</strong>
+        </AlertBanner>
 
         <FormField label="Email" :error="fieldErrors.email" required hint="Même adresse qu'à l'inscription">
           <input

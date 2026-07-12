@@ -1,13 +1,12 @@
 import hashlib
 import logging
 import random
-import threading
 from datetime import timedelta
 
 from django.utils import timezone
 
 from core.models import EmailOTP, Role, User
-from core.services.email_service import enqueue_email
+from core.services.email_service import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +23,11 @@ def _generate_code() -> str:
     return f"{random.randint(0, 999999):06d}"
 
 
-def issue_registration_otp(user: User) -> str:
-    """Génère un OTP 6 chiffres, l'enregistre et l'envoie par email (async)."""
+def issue_registration_otp(user: User) -> tuple[str, bool]:
+    """Génère un OTP 6 chiffres, l'enregistre et tente l'envoi email.
+
+    Retourne (code, email_envoyé).
+    """
     EmailOTP.objects.filter(
         user=user,
         purpose=PURPOSE_REGISTRATION,
@@ -47,9 +49,9 @@ def issue_registration_otp(user: User) -> str:
         f"Ne le partagez avec personne.\n\n"
         f"— Centre Hospitalier SGHL"
     )
-    enqueue_email(user.email, "SGHL — Code de vérification (6 chiffres)", body)
-    logger.info("OTP inscription généré pour %s (dev: %s)", user.email, code)
-    return code
+    sent = send_email(user.email, "SGHL — Code de vérification (6 chiffres)", body)
+    logger.info("OTP inscription pour %s (envoyé=%s, code_dev=%s)", user.email, sent, code)
+    return code, sent
 
 
 def verify_registration_otp(email: str, code: str) -> User:
@@ -86,7 +88,7 @@ def verify_registration_otp(email: str, code: str) -> User:
     return user
 
 
-def resend_registration_otp(email: str) -> User:
+def resend_registration_otp(email: str) -> tuple[User, str, bool]:
     email = email.strip().lower()
     user = User.objects.filter(email__iexact=email, is_active=True).first()
     if not user:
@@ -95,5 +97,5 @@ def resend_registration_otp(email: str) -> User:
         raise ValueError("Email déjà vérifié.")
     if not user.roles.filter(role__code=Role.PATIENT, is_active=True).exists():
         raise ValueError("Compte patient introuvable.")
-    issue_registration_otp(user)
-    return user
+    code, sent = issue_registration_otp(user)
+    return user, code, sent

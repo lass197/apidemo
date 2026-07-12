@@ -36,6 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading = false;
   String _error = '';
   String _pendingEmail = '';
+  String _otpDevCode = '';
   List<PhoneCountry> _countries = [];
 
   @override
@@ -98,9 +99,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
     if (!mounted) return;
     if (result.ok) {
+      final data = result.data!;
+      final devCode = data['otp_dev_code'] as String?;
       setState(() {
         _step = 2;
-        _pendingEmail = (result.data!['email'] as String?) ?? _email.text.trim().toLowerCase();
+        _pendingEmail = (data['email'] as String?) ?? _email.text.trim().toLowerCase();
+        _otpDevCode = devCode ?? '';
+        if (_otpDevCode.isNotEmpty) {
+          _otpCode.text = _otpDevCode;
+        }
         _loading = false;
       });
     } else {
@@ -374,10 +381,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           const SizedBox(height: 16),
           if (_error.isNotEmpty) ...[AppErrorBanner(message: _error), const SizedBox(height: 16)],
+          if (_otpDevCode.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.teal.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.teal.shade200),
+              ),
+              child: Text(
+                'Mode démo — code : $_otpDevCode',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  letterSpacing: 4,
+                  color: Colors.teal.shade900,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           const Center(child: Text('📧', style: TextStyle(fontSize: 40))),
           const SizedBox(height: 12),
-          const Text(
-            'Entrez le code à 6 chiffres reçu par email pour activer votre compte.',
+          Text(
+            _otpDevCode.isNotEmpty
+                ? 'Entrez le code à 6 chiffres affiché ci-dessus pour activer votre compte.'
+                : 'Entrez le code à 6 chiffres reçu par email pour activer votre compte.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),

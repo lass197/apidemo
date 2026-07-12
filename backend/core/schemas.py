@@ -27,6 +27,14 @@ class RegisterPendingOut(Schema):
     email: str
     user_id: UUID
     otp_sent: bool
+    # Présent uniquement si SMTP non configuré (mode démo Render)
+    otp_dev_code: Optional[str] = None
+
+
+class ResendOtpOut(Schema):
+    detail: str
+    otp_sent: bool = False
+    otp_dev_code: Optional[str] = None
 
 
 class VerifyEmailOtpIn(Schema):
