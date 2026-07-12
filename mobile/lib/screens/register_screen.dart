@@ -7,6 +7,7 @@ import '../utils/form_validators.dart';
 import '../widgets/app_form_field.dart';
 import '../widgets/phone_input.dart';
 import '../widgets/sghl_form_fields.dart';
+import '../widgets/sghl_ui.dart';
 import 'login_screen.dart';
 import 'patient_home_screen.dart';
 
@@ -31,11 +32,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _phone = '';
   bool _loading = false;
   String _error = '';
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   void dispose() {
@@ -108,78 +104,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       body: Column(
         children: [
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.only(
-              top: MediaQuery.paddingOf(context).top + 8,
-              left: 8,
-              right: 24,
-              bottom: 28,
-            ),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [SghlTheme.slate, Color(0xFF334155)],
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'SGHL',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Créer un compte patient',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 6),
-                      Text(
-                        'Accès immédiat à vos rendez-vous, résultats et soins',
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          SghlAuthHeader(
+            title: 'Créer un compte patient',
+            subtitle: 'Accès immédiat à vos rendez-vous, résultats et soins',
+            icon: Icons.person_add_alt_1_rounded,
+            onBack: () => Navigator.pop(context),
           ),
           Expanded(
             child: Container(
-              color: SghlTheme.canvas,
+              decoration: SghlTheme.pageGradient(),
               child: Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
-                    child: Material(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 380),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, t, child) => Opacity(
+                        opacity: t,
+                        child: Transform.translate(
+                          offset: Offset(0, 12 * (1 - t)),
+                          child: child,
+                        ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
+                      child: SghlFormPanel(
                         child: Form(
                           key: _formKey,
                           autovalidateMode: AutovalidateMode.onUserInteraction,

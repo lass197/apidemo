@@ -6,6 +6,7 @@ import 'screens/portal_screen.dart';
 import 'services/auth_service.dart';
 import 'services/token_storage.dart';
 import 'theme/sghl_theme.dart';
+import 'widgets/sghl_ui.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,16 +51,8 @@ class _BootstrapScreen extends StatelessWidget {
         if (snapshot.connectionState != ConnectionState.done) {
           return Scaffold(
             body: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
-                ),
-              ),
-              child: const Center(
-                child: CircularProgressIndicator(color: SghlTheme.teal),
-              ),
+              decoration: SghlTheme.pageGradient(),
+              child: const SghlLoading(message: 'Chargement…'),
             ),
           );
         }

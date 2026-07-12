@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import '../theme/sghl_theme.dart';
 import '../utils/document_save.dart';
+import '../widgets/sghl_ui.dart';
 import 'portal_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
@@ -43,10 +44,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     if (_patient == null) {
       return Scaffold(
         backgroundColor: SghlTheme.canvas,
-        appBar: AppBar(
-          title: const Text('SGHL'),
-        ),
-        body: const Center(child: CircularProgressIndicator(color: SghlTheme.teal)),
+        appBar: AppBar(title: const Text('SGHL')),
+        body: const SghlLoading(message: 'Chargement du profil…'),
       );
     }
 
@@ -223,7 +222,7 @@ class _RdvTabState extends State<RdvTab> {
     if (widget.patientId.isEmpty) {
       return const Center(child: Text('Profil patient non lié au compte.'));
     }
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const SghlLoading();
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -303,7 +302,7 @@ class _RdvTabState extends State<RdvTab> {
                   ),
                   const SizedBox(height: 12),
                   if (_slots.isEmpty)
-                    const Text('Aucun créneau disponible.', style: TextStyle(color: Colors.grey))
+                    const Text('Aucun créneau disponible.', style: TextStyle(color: SghlTheme.muted))
                   else
                     DropdownButtonFormField<String>(
                       value: _selectedSlot,
@@ -332,32 +331,29 @@ class _RdvTabState extends State<RdvTab> {
             ),
           ),
           const SizedBox(height: 20),
-          Text('Mes rendez-vous (${_appointments.length})', style: Theme.of(context).textTheme.titleMedium),
+          Text('Mes rendez-vous (${_appointments.length})', style: SghlTheme.sectionTitle(context)),
           const SizedBox(height: 8),
-          ..._appointments.map((a) => Card(
-                elevation: 0,
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.teal.shade100,
-                    child: const Icon(Icons.event, color: Colors.teal),
-                  ),
-                  title: Text(a['doctor_name'] as String? ?? 'Médecin'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_fmt(a['scheduled_at'] as String?)),
-                      if ((a['reason'] as String?)?.isNotEmpty == true)
-                        Text(a['reason'] as String, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                    ],
-                  ),
-                  trailing: Chip(label: Text(_statusLabel(a['status'] as String?))),
+          ..._appointments.map((a) => SghlListTileCard(
+                leading: CircleAvatar(
+                  backgroundColor: SghlTheme.teal.withValues(alpha: 0.12),
+                  child: const Icon(Icons.event, color: SghlTheme.teal),
                 ),
+                title: Text(a['doctor_name'] as String? ?? 'Médecin'),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_fmt(a['scheduled_at'] as String?)),
+                    if ((a['reason'] as String?)?.isNotEmpty == true)
+                      Text(a['reason'] as String),
+                  ],
+                ),
+                trailing: SghlStatusBadge(label: _statusLabel(a['status'] as String?)),
               )),
           if (_appointments.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('Aucun rendez-vous pour le moment.', style: TextStyle(color: Colors.grey))),
+            const SghlEmptyState(
+              icon: Icons.event_busy_outlined,
+              title: 'Aucun rendez-vous',
+              subtitle: 'Prenez un rendez-vous ci-dessus.',
             ),
         ],
       ),
@@ -521,7 +517,7 @@ class _InvoicesTabState extends State<InvoicesTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const SghlLoading();
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -536,9 +532,10 @@ class _InvoicesTabState extends State<InvoicesTab> {
           ),
           const SizedBox(height: 16),
           if (_invoices.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: Text('Aucune facture pour le moment', style: TextStyle(color: Colors.grey))),
+            const SghlEmptyState(
+              icon: Icons.receipt_long_outlined,
+              title: 'Aucune facture',
+              subtitle: 'Vos factures apparaîtront ici.',
             )
           else
             ..._invoices.map((inv) {
@@ -792,7 +789,7 @@ class _DossierDocumentsSectionState extends State<_DossierDocumentsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const SghlLoading();
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -874,21 +871,18 @@ class _DossierDocumentsSectionState extends State<_DossierDocumentsSection> {
           ),
           const SizedBox(height: 8),
           if (_docs.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(child: Text('Aucun document disponible', style: TextStyle(color: Colors.grey))),
+            const SghlEmptyState(
+              icon: Icons.folder_off_outlined,
+              title: 'Aucun document',
+              subtitle: 'Les documents déposés par l’hôpital apparaîtront ici.',
             )
           else
-            ..._docs.map((d) => Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: const Icon(Icons.picture_as_pdf, color: Colors.red, size: 32),
-                    title: Text(d['title'] as String? ?? 'Document'),
-                    subtitle: Text(d['document_type'] as String? ?? ''),
-                    trailing: const Icon(Icons.download_rounded),
-                    onTap: () => _download(d),
-                  ),
+            ..._docs.map((d) => SghlListTileCard(
+                  leading: const Icon(Icons.picture_as_pdf_outlined, color: SghlTheme.teal, size: 28),
+                  title: Text(d['title'] as String? ?? 'Document'),
+                  subtitle: Text(d['document_type'] as String? ?? ''),
+                  trailing: const Icon(Icons.download_rounded, color: SghlTheme.muted),
+                  onTap: () => _download(d),
                 )),
         ],
       ),
@@ -935,7 +929,15 @@ class _CarePlanTabState extends State<CarePlanTab> {
     return RefreshIndicator(
       onRefresh: _load,
       child: _tasks.isEmpty
-          ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Aucun soin planifié'))])
+          ? ListView(
+              children: const [
+                SizedBox(height: 80),
+                SghlEmptyState(
+                  icon: Icons.healing_outlined,
+                  title: 'Aucun soin planifié',
+                ),
+              ],
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _tasks.length,
@@ -1079,7 +1081,15 @@ class _RemindersTabState extends State<RemindersTab> {
     return RefreshIndicator(
       onRefresh: _load,
       child: _reminders.isEmpty
-          ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Aucun rappel médicament'))])
+          ? ListView(
+              children: const [
+                SizedBox(height: 80),
+                SghlEmptyState(
+                  icon: Icons.alarm_off_outlined,
+                  title: 'Aucun rappel médicament',
+                ),
+              ],
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _reminders.length,

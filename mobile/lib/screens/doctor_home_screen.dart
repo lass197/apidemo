@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../services/auth_service.dart';
 import '../theme/sghl_theme.dart';
+import '../widgets/sghl_ui.dart';
 import 'portal_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
@@ -98,6 +99,19 @@ const _statusLabels = {
   'COMPLETED': 'Terminé',
 };
 
+Color _statusColor(String status) {
+  switch (status) {
+    case 'CONFIRMED':
+      return SghlTheme.teal;
+    case 'CANCELLED':
+      return const Color(0xFFB91C1C);
+    case 'COMPLETED':
+      return const Color(0xFF475569);
+    default:
+      return const Color(0xFFCA8A04);
+  }
+}
+
 class DoctorAppointmentsTab extends StatefulWidget {
   const DoctorAppointmentsTab({super.key});
 
@@ -145,7 +159,7 @@ class _DoctorAppointmentsTabState extends State<DoctorAppointmentsTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const SghlLoading();
 
     return Column(
       children: [
@@ -164,36 +178,41 @@ class _DoctorAppointmentsTabState extends State<DoctorAppointmentsTab> {
           child: RefreshIndicator(
             onRefresh: _load,
             child: _filtered.isEmpty
-                ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Aucun rendez-vous'))])
+                ? ListView(
+                    children: const [
+                      SizedBox(height: 80),
+                      SghlEmptyState(
+                        icon: Icons.event_busy_outlined,
+                        title: 'Aucun rendez-vous',
+                        subtitle: 'Les rendez-vous à venir apparaîtront ici.',
+                      ),
+                    ],
+                  )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: _filtered.length,
                     itemBuilder: (_, i) {
                       final a = _filtered[i];
                       final status = a['status'] as String? ?? '';
-                      return Card(
-                        elevation: 0,
-                        margin: const EdgeInsets.only(bottom: 10),
-                        child: ListTile(
-                          isThreeLine: true,
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.teal.shade100,
-                            child: const Icon(Icons.person, color: Colors.teal),
-                          ),
-                          title: Text(a['patient_name'] as String? ?? 'Patient', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(_fmtDate(a['scheduled_at'] as String?)),
-                              if ((a['patient_phone'] as String?)?.isNotEmpty == true)
-                                Text('📞 ${a['patient_phone']}', style: const TextStyle(fontSize: 12)),
-                              if ((a['patient_email'] as String?)?.isNotEmpty == true)
-                                Text('✉ ${a['patient_email']}', style: const TextStyle(fontSize: 12)),
-                            ],
-                          ),
-                          trailing: Chip(
-                            label: Text(_statusLabels[status] ?? status, style: const TextStyle(fontSize: 10)),
-                          ),
+                      return SghlListTileCard(
+                        leading: CircleAvatar(
+                          backgroundColor: SghlTheme.teal.withValues(alpha: 0.12),
+                          child: const Icon(Icons.person, color: SghlTheme.teal),
+                        ),
+                        title: Text(a['patient_name'] as String? ?? 'Patient'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_fmtDate(a['scheduled_at'] as String?)),
+                            if ((a['patient_phone'] as String?)?.isNotEmpty == true)
+                              Text(a['patient_phone'] as String),
+                            if ((a['patient_email'] as String?)?.isNotEmpty == true)
+                              Text(a['patient_email'] as String),
+                          ],
+                        ),
+                        trailing: SghlStatusBadge(
+                          label: _statusLabels[status] ?? status,
+                          color: _statusColor(status),
                         ),
                       );
                     },
@@ -235,43 +254,46 @@ class _DoctorPatientsTabState extends State<DoctorPatientsTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const SghlLoading();
 
     return RefreshIndicator(
       onRefresh: _load,
       child: _patients.isEmpty
-          ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Aucun patient'))])
+          ? ListView(
+              children: const [
+                SizedBox(height: 80),
+                SghlEmptyState(
+                  icon: Icons.people_outline,
+                  title: 'Aucun patient',
+                ),
+              ],
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _patients.length,
               itemBuilder: (_, i) {
                 final p = _patients[i];
-                return Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.teal.shade50,
-                      child: Text(
-                        (p['name'] as String? ?? 'P').substring(0, 1).toUpperCase(),
-                        style: const TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold),
+                final name = p['name'] as String? ?? 'Patient';
+                return SghlListTileCard(
+                  leading: CircleAvatar(
+                    backgroundColor: SghlTheme.teal.withValues(alpha: 0.1),
+                    child: Text(
+                      name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'P',
+                      style: const TextStyle(color: SghlTheme.teal, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  title: Text(name),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if ((p['phone'] as String?)?.isNotEmpty == true) Text(p['phone'] as String),
+                      if ((p['email'] as String?)?.isNotEmpty == true) Text(p['email'] as String),
+                      Text(
+                        p['next_appointment_at'] != null
+                            ? 'Prochain RDV : ${_fmtDate(p['next_appointment_at'] as String?)}'
+                            : 'Pas de RDV à venir',
                       ),
-                    ),
-                    title: Text(p['name'] as String? ?? 'Patient', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if ((p['phone'] as String?)?.isNotEmpty == true) Text('📞 ${p['phone']}'),
-                        if ((p['email'] as String?)?.isNotEmpty == true) Text('✉ ${p['email']}'),
-                        Text(
-                          p['next_appointment_at'] != null
-                              ? 'Prochain RDV : ${_fmtDate(p['next_appointment_at'] as String?)}'
-                              : 'Pas de RDV à venir',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                    isThreeLine: true,
+                    ],
                   ),
                 );
               },
@@ -334,9 +356,12 @@ class _DoctorChatTabState extends State<DoctorChatTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loadingPatients) return const Center(child: CircularProgressIndicator());
+    if (_loadingPatients) return const SghlLoading();
     if (_patients.isEmpty) {
-      return const Center(child: Text('Aucun patient pour la messagerie'));
+      return const SghlEmptyState(
+        icon: Icons.chat_bubble_outline,
+        title: 'Aucun patient pour la messagerie',
+      );
     }
 
     return Column(
@@ -347,7 +372,6 @@ class _DoctorChatTabState extends State<DoctorChatTab> {
             value: _selectedPatientId,
             decoration: const InputDecoration(
               labelText: 'Patient',
-              border: OutlineInputBorder(),
               isDense: true,
             ),
             items: _patients
@@ -374,9 +398,9 @@ class _DoctorChatTabState extends State<DoctorChatTab> {
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.teal.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.teal.shade100),
+                    color: SghlTheme.teal.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: SghlTheme.teal.withValues(alpha: 0.15)),
                   ),
                   child: Text(m['content'] as String? ?? ''),
                 ),
@@ -385,7 +409,8 @@ class _DoctorChatTabState extends State<DoctorChatTab> {
           ),
         ),
         Material(
-          elevation: 8,
+          elevation: 4,
+          color: Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
@@ -395,7 +420,6 @@ class _DoctorChatTabState extends State<DoctorChatTab> {
                     controller: _ctrl,
                     decoration: const InputDecoration(
                       hintText: 'Répondre au patient…',
-                      border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                     onSubmitted: (_) => _send(),
