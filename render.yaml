@@ -1,8 +1,4 @@
-# Blueprint Render — SGHL (PostgreSQL free tier)
-#
-# Le hostname interne dpg-* est réécrit en
-# dpg-*.{RENDER_DB_REGION}-postgres.render.com (SSL) pour éviter
-# "could not translate host name".
+# Blueprint Render — SGHL (PostgreSQL obligatoire)
 
 services:
   - type: web
@@ -20,8 +16,6 @@ services:
         value: "False"
       - key: DB_SSLMODE
         value: "require"
-      # Région de la base existante (voir Dashboard → sghl-db → Info)
-      # Valeurs courantes : oregon | frankfurt
       - key: RENDER_DB_REGION
         value: "oregon"
       - key: SECRET_KEY
@@ -39,7 +33,8 @@ services:
           name: sghl-db
           property: connectionString
       - key: EMAIL_HOST
-        sync: false      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false

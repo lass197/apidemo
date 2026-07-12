@@ -130,7 +130,9 @@ def _database_from_url(url: str) -> dict:
 
 
 _database_url = os.getenv("DATABASE_URL", "").strip()
-# Toujours PostgreSQL si DATABASE_URL est fourni (ignorer USE_SQLITE).
+_is_render = os.getenv("RENDER", "").lower() in ("true", "1", "yes")
+
+# Toujours PostgreSQL si DATABASE_URL est fourni.
 if _database_url:
     DATABASES = {"default": _database_from_url(_database_url)}
 elif os.getenv("DB_ENGINE", "sqlite") == "postgresql":
@@ -146,8 +148,17 @@ elif os.getenv("DB_ENGINE", "sqlite") == "postgresql":
             "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "prefer")},
         }
     }
+elif _is_render:
+    # Sur Render : jamais de SQLite silencieux (sinon l'ancien deploy reste "ok")
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured(
+        "DATABASE_URL obligatoire sur Render. "
+        "Dashboard → sghl-db → Connect → External Database URL → "
+        "coller dans sghl-web → Environment → DATABASE_URL."
+    )
 else:
-    # SQLite uniquement en local (pas de DATABASE_URL)
+    # SQLite uniquement en développement local
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
