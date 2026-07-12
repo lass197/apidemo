@@ -5,6 +5,7 @@ import 'screens/patient_home_screen.dart';
 import 'screens/portal_screen.dart';
 import 'services/auth_service.dart';
 import 'services/token_storage.dart';
+import 'theme/sghl_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,12 +19,9 @@ class SghlApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SGHL Mobile',
+      title: 'SGHL',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0D9488)),
-        useMaterial3: true,
-      ),
+      theme: SghlTheme.light(),
       home: const _BootstrapScreen(),
     );
   }
@@ -50,7 +48,20 @@ class _BootstrapScreen extends StatelessWidget {
       future: _resolveHome(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return Scaffold(
+            body: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFF1F5F9), Color(0xFFE2E8F0)],
+                ),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(color: SghlTheme.teal),
+              ),
+            ),
+          );
         }
         return snapshot.data ?? const PortalScreen();
       },

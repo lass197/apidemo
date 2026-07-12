@@ -78,3 +78,37 @@ def serve_admin(request, resource=""):
         """,
         content_type="text/html; charset=utf-8",
     )
+
+
+def serve_mobile(request, resource=""):
+    """Sert le build Flutter Web sous /m/ — fallback index.html."""
+    dist = settings.MOBILE_DIST
+
+    if resource:
+        target = dist / resource
+        if target.is_file():
+            content_type, _ = mimetypes.guess_type(str(target))
+            return FileResponse(
+                target.open("rb"),
+                content_type=content_type or "application/octet-stream",
+            )
+
+    index = dist / "index.html"
+    if index.is_file():
+        return FileResponse(index.open("rb"), content_type="text/html; charset=utf-8")
+
+    return HttpResponse(
+        """
+        <!DOCTYPE html>
+        <html lang="fr"><head><meta charset="utf-8"><title>SGHL Mobile</title></head>
+        <body style="font-family:sans-serif;max-width:600px;margin:3rem auto;padding:1rem">
+          <h1>SGHL — App mobile non compilée</h1>
+          <p>Le dossier <code>mobile/dist</code> est absent.</p>
+          <pre>cd mobile
+flutter build web --release --base-href /m/ --dart-define=API_BASE=/api/v1
+# puis copier build/web vers mobile/dist</pre>
+          <p><a href="/">Staff</a> · <a href="/admin/">Admin</a> · <a href="/api/v1/docs">API</a></p>
+        </body></html>
+        """,
+        content_type="text/html; charset=utf-8",
+    )

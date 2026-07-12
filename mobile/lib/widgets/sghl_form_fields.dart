@@ -63,7 +63,6 @@ class SghlTextFormField extends StatelessWidget {
         labelText: required ? '$labelText *' : labelText,
         hintText: hintText,
         helperText: helperText,
-        border: const OutlineInputBorder(),
       ),
     );
   }
@@ -86,7 +85,6 @@ class SghlGenderFormField extends StatelessWidget {
       initialValue: value,
       decoration: const InputDecoration(
         labelText: 'Genre *',
-        border: OutlineInputBorder(),
       ),
       items: const [
         DropdownMenuItem(value: 'F', child: Text('Féminin')),

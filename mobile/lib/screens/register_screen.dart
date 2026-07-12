@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../data/phone_countries.dart';
 import '../services/auth_service.dart';
+import '../theme/sghl_theme.dart';
 import '../utils/form_validators.dart';
 import '../widgets/app_form_field.dart';
 import '../widgets/phone_input.dart';
@@ -110,116 +111,189 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Créer un compte patient'),
-        backgroundColor: const Color(0xFF475569),
-        foregroundColor: Colors.white,
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Form(
-                key: _formKey,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Accès immédiat à vos rendez-vous, résultats et soins',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.black54),
-                    ),
-                    const SizedBox(height: 20),
-                    if (_error.isNotEmpty) ...[AppErrorBanner(message: _error), const SizedBox(height: 16)],
-                    SghlTextFormField(
-                      controller: _firstName,
-                      labelText: 'Prénom',
-                      required: true,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[A-Za-zÀ-ÿ\s\-']"))],
-                      validator: (v) => FormValidators.personName(v, 'Prénom'),
-                    ),
-                    const SizedBox(height: 12),
-                    SghlTextFormField(
-                      controller: _lastName,
-                      labelText: 'Nom',
-                      required: true,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[A-Za-zÀ-ÿ\s\-']"))],
-                      validator: (v) => FormValidators.personName(v, 'Nom'),
-                    ),
-                    const SizedBox(height: 12),
-                    SghlTextFormField(
-                      controller: _email,
-                      labelText: 'Email',
-                      required: true,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: FormValidators.email,
-                    ),
-                    const SizedBox(height: 12),
-                    SghlTextFormField(
-                      controller: _username,
-                      labelText: 'Identifiant (optionnel)',
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: _pickDate,
-                      child: Text(_dateOfBirth.isEmpty ? 'Date de naissance *' : 'Naissance : $_dateOfBirth'),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _gender,
-                      decoration: const InputDecoration(labelText: 'Genre', border: OutlineInputBorder()),
-                      items: const [
-                        DropdownMenuItem(value: 'F', child: Text('Féminin')),
-                        DropdownMenuItem(value: 'M', child: Text('Masculin')),
-                        DropdownMenuItem(value: 'O', child: Text('Autre')),
-                      ],
-                      onChanged: (v) => setState(() => _gender = v ?? 'F'),
-                    ),
-                    const SizedBox(height: 12),
-                    PhoneInput(
-                      countries: _countries,
-                      onChanged: (v) => _phone = v,
-                    ),
-                    const SizedBox(height: 12),
-                    SghlTextFormField(
-                      controller: _password,
-                      labelText: 'Mot de passe',
-                      required: true,
-                      obscureText: true,
-                      validator: FormValidators.password,
-                    ),
-                    const SizedBox(height: 12),
-                    SghlTextFormField(
-                      controller: _passwordConfirm,
-                      labelText: 'Confirmer',
-                      required: true,
-                      obscureText: true,
-                      validator: (v) =>
-                          v != _password.text ? 'Les mots de passe ne correspondent pas.' : null,
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _loading ? null : _submitRegister,
-                      child: Text(_loading ? 'Création…' : 'Créer mon compte'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginScreen(portal: PortalType.patient),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: MediaQuery.paddingOf(context).top + 8,
+              left: 8,
+              right: 24,
+              bottom: 28,
+            ),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [SghlTheme.slate, Color(0xFF334155)],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SGHL',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1,
                         ),
                       ),
-                      child: const Text('Déjà inscrit ? Se connecter'),
+                      SizedBox(height: 4),
+                      Text(
+                        'Créer un compte patient',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        'Accès immédiat à vos rendez-vous, résultats et soins',
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Container(
+              color: SghlTheme.canvas,
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Material(
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Form(
+                          key: _formKey,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (_error.isNotEmpty) ...[
+                                AppErrorBanner(message: _error),
+                                const SizedBox(height: 16),
+                              ],
+                              SghlTextFormField(
+                                controller: _firstName,
+                                labelText: 'Prénom',
+                                required: true,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r"[A-Za-zÀ-ÿ\s\-']")),
+                                ],
+                                validator: (v) => FormValidators.personName(v, 'Prénom'),
+                              ),
+                              const SizedBox(height: 12),
+                              SghlTextFormField(
+                                controller: _lastName,
+                                labelText: 'Nom',
+                                required: true,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(RegExp(r"[A-Za-zÀ-ÿ\s\-']")),
+                                ],
+                                validator: (v) => FormValidators.personName(v, 'Nom'),
+                              ),
+                              const SizedBox(height: 12),
+                              SghlTextFormField(
+                                controller: _email,
+                                labelText: 'Email',
+                                required: true,
+                                keyboardType: TextInputType.emailAddress,
+                                validator: FormValidators.email,
+                              ),
+                              const SizedBox(height: 12),
+                              SghlTextFormField(
+                                controller: _username,
+                                labelText: 'Identifiant (optionnel)',
+                              ),
+                              const SizedBox(height: 12),
+                              OutlinedButton(
+                                onPressed: _pickDate,
+                                child: Text(
+                                  _dateOfBirth.isEmpty
+                                      ? 'Date de naissance *'
+                                      : 'Naissance : $_dateOfBirth',
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<String>(
+                                value: _gender,
+                                decoration: const InputDecoration(labelText: 'Genre'),
+                                items: const [
+                                  DropdownMenuItem(value: 'F', child: Text('Féminin')),
+                                  DropdownMenuItem(value: 'M', child: Text('Masculin')),
+                                  DropdownMenuItem(value: 'O', child: Text('Autre')),
+                                ],
+                                onChanged: (v) => setState(() => _gender = v ?? 'F'),
+                              ),
+                              const SizedBox(height: 12),
+                              PhoneInput(
+                                countries: _countries,
+                                onChanged: (v) => _phone = v,
+                              ),
+                              const SizedBox(height: 12),
+                              SghlTextFormField(
+                                controller: _password,
+                                labelText: 'Mot de passe',
+                                required: true,
+                                obscureText: true,
+                                validator: FormValidators.password,
+                              ),
+                              const SizedBox(height: 12),
+                              SghlTextFormField(
+                                controller: _passwordConfirm,
+                                labelText: 'Confirmer',
+                                required: true,
+                                obscureText: true,
+                                validator: (v) =>
+                                    v != _password.text ? 'Les mots de passe ne correspondent pas.' : null,
+                              ),
+                              const SizedBox(height: 24),
+                              FilledButton(
+                                onPressed: _loading ? null : _submitRegister,
+                                child: Text(_loading ? 'Création…' : 'Créer mon compte'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginScreen(portal: PortalType.patient),
+                                  ),
+                                ),
+                                child: const Text('Déjà inscrit ? Se connecter'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

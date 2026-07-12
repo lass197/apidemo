@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/auth_service.dart';
+import '../theme/sghl_theme.dart';
 import '../utils/document_save.dart';
 import 'portal_screen.dart';
 
@@ -41,31 +42,28 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   Widget build(BuildContext context) {
     if (_patient == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: SghlTheme.canvas,
         appBar: AppBar(
-          elevation: 0,
-          backgroundColor: const Color(0xFF475569),
-          foregroundColor: Colors.white,
-          title: const Text('SGHL Patient', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text('SGHL'),
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator(color: SghlTheme.teal)),
       );
     }
 
     final patientId = _patient!['id'].toString();
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SghlTheme.canvas,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFF475569),
-        foregroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('SGHL Patient', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400)),
+            const Text(
+              'SGHL',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white70),
+            ),
             Text(
-              _patient != null ? 'Bonjour, ${_patient!['first_name']}' : 'Chargement…',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Bonjour, ${_patient!['first_name']}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ],
         ),
@@ -85,9 +83,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.calendar_month), label: 'RDV'),
-          NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Factures'),
-          NavigationDestination(icon: Icon(Icons.folder_shared_outlined), label: 'Dossier'),
+          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'RDV'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Factures'),
+          NavigationDestination(icon: Icon(Icons.folder_shared_outlined), selectedIcon: Icon(Icons.folder_shared), label: 'Dossier'),
         ],
       ),
     );

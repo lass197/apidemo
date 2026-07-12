@@ -15,6 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 ADMIN_DIST = PROJECT_ROOT / "admin" / "dist"
+MOBILE_DIST = PROJECT_ROOT / "mobile" / "dist"
 
 SECRET_KEY = os.getenv(
     "SECRET_KEY",

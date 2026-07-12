@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
+import '../theme/sghl_theme.dart';
 import '../utils/form_validators.dart';
 import '../widgets/app_form_field.dart';
 import '../widgets/sghl_form_fields.dart';
@@ -130,141 +131,227 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final isDoctor = widget.portal == PortalType.doctor;
     final isPatient = widget.portal == PortalType.patient;
+    final headerColor = isDoctor ? SghlTheme.tealDark : SghlTheme.slate;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isDoctor ? 'Personnel hospitalier' : 'Espace patient'),
-        backgroundColor: isDoctor ? const Color(0xFF134E4A) : const Color(0xFF475569),
-        foregroundColor: Colors.white,
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Icon(
-                      isDoctor ? Icons.medical_services_rounded : Icons.person_rounded,
-                      size: 64,
-                      color: isDoctor ? const Color(0xFF0D9488) : const Color(0xFF475569),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      isPatient && _step == 2 ? 'Confirmation' : (isDoctor ? 'Personnel hospitalier' : 'Espace patient'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      isPatient && _step == 2
-                          ? 'Validez le code affiché pour entrer'
-                          : (isDoctor ? 'Connexion staff SGHL' : 'Rendez-vous, résultats, soins'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(height: 24),
-                    if (_otpDevCode.isNotEmpty && _step == 2) ...[
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: MediaQuery.paddingOf(context).top + 8,
+              left: 8,
+              right: 24,
+              bottom: 28,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDoctor
+                    ? const [SghlTheme.tealDark, SghlTheme.teal]
+                    : const [SghlTheme.slate, Color(0xFF334155)],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.teal.shade50,
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.teal.shade200),
                         ),
+                        child: Icon(
+                          isDoctor ? Icons.medical_services_rounded : Icons.person_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Code de connexion', style: TextStyle(fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 8),
-                            Text(
-                              _otpDevCode,
+                            const Text(
+                              'SGHL',
                               style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 8,
-                                color: Colors.teal.shade900,
+                                color: Colors.white70,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1,
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 2),
                             Text(
-                              'Saisissez ce code ci-dessous pour confirmer votre connexion.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                              isPatient && _step == 2
+                                  ? 'Confirmation'
+                                  : (isDoctor ? 'Personnel hospitalier' : 'Espace patient'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isPatient && _step == 2
+                                  ? 'Validez le code affiché pour entrer'
+                                  : (isDoctor ? 'Connexion staff' : 'Rendez-vous, résultats, soins'),
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
                     ],
-                    if (_error.isNotEmpty) ...[AppErrorBanner(message: _error), const SizedBox(height: 16)],
-                    if (_step == 1) ...[
-                      SghlTextFormField(
-                        controller: _username,
-                        labelText: isPatient ? 'Email' : 'Identifiant',
-                        required: true,
-                        keyboardType: isPatient ? TextInputType.emailAddress : TextInputType.text,
-                        validator: isPatient ? FormValidators.email : FormValidators.required,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Container(
+              color: SghlTheme.canvas,
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Material(
+                      color: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
                       ),
-                      const SizedBox(height: 12),
-                      SghlTextFormField(
-                        controller: _password,
-                        labelText: 'Mot de passe',
-                        required: true,
-                        obscureText: true,
-                        validator: FormValidators.required,
-                      ),
-                    ] else ...[
-                      SghlTextFormField(
-                        controller: _otpCode,
-                        labelText: 'Code à 6 chiffres',
-                        required: true,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _loading ? null : _login,
-                      child: Text(_loading
-                          ? 'Patientez…'
-                          : (_step == 2 ? 'Confirmer la connexion' : 'Se connecter')),
-                    ),
-                    if (_step == 2) ...[
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () => setState(() {
-                          _step = 1;
-                          _otpDevCode = '';
-                          _challengeId = '';
-                          _otpCode.clear();
-                          _error = '';
-                        }),
-                        child: const Text('← Modifier email / mot de passe'),
-                      ),
-                    ],
-                    if (isPatient && _step == 1) ...[
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Form(
+                          key: _formKey,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (_otpDevCode.isNotEmpty && _step == 2) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFECFDF5),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: SghlTheme.teal.withValues(alpha: 0.35)),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Code de connexion',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: headerColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        _otpDevCode,
+                                        style: const TextStyle(
+                                          fontSize: 34,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 10,
+                                          color: SghlTheme.tealDark,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Saisissez ce code ci-dessous pour confirmer.',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                              if (_error.isNotEmpty) ...[
+                                AppErrorBanner(message: _error),
+                                const SizedBox(height: 16),
+                              ],
+                              if (_step == 1) ...[
+                                SghlTextFormField(
+                                  controller: _username,
+                                  labelText: isPatient ? 'Email' : 'Identifiant',
+                                  required: true,
+                                  keyboardType: isPatient ? TextInputType.emailAddress : TextInputType.text,
+                                  validator: isPatient ? FormValidators.email : FormValidators.required,
+                                ),
+                                const SizedBox(height: 14),
+                                SghlTextFormField(
+                                  controller: _password,
+                                  labelText: 'Mot de passe',
+                                  required: true,
+                                  obscureText: true,
+                                  validator: FormValidators.required,
+                                ),
+                              ] else ...[
+                                SghlTextFormField(
+                                  controller: _otpCode,
+                                  labelText: 'Code à 6 chiffres',
+                                  required: true,
+                                  keyboardType: TextInputType.number,
+                                  maxLength: 6,
+                                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                              const SizedBox(height: 24),
+                              FilledButton(
+                                onPressed: _loading ? null : _login,
+                                child: Text(
+                                  _loading
+                                      ? 'Patientez…'
+                                      : (_step == 2 ? 'Confirmer la connexion' : 'Se connecter'),
+                                ),
+                              ),
+                              if (_step == 2) ...[
+                                const SizedBox(height: 8),
+                                TextButton(
+                                  onPressed: () => setState(() {
+                                    _step = 1;
+                                    _otpDevCode = '';
+                                    _challengeId = '';
+                                    _otpCode.clear();
+                                    _error = '';
+                                  }),
+                                  child: const Text('← Modifier email / mot de passe'),
+                                ),
+                              ],
+                              if (isPatient && _step == 1) ...[
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                                  ),
+                                  child: const Text('Créer un compte patient'),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                        child: const Text('Créer un compte patient'),
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

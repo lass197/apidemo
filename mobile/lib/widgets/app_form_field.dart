@@ -25,7 +25,7 @@ class AppFormField extends StatelessWidget {
           text: TextSpan(
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade800,
+                  color: const Color(0xFF1E293B),
                 ),
             children: [
               TextSpan(text: label),

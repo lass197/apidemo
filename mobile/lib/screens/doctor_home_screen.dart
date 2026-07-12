@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../services/auth_service.dart';
+import '../theme/sghl_theme.dart';
 import 'portal_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
@@ -40,16 +41,20 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   Widget build(BuildContext context) {
     final name = _user != null ? '${_user!['first_name']} ${_user!['last_name']}' : 'Médecin';
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SghlTheme.canvas,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFF134E4A),
-        foregroundColor: Colors.white,
+        backgroundColor: SghlTheme.tealDark,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('SGHL Médecin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400)),
-            Text('Dr. $name', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'SGHL',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white70),
+            ),
+            Text(
+              'Dr. $name',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
           ],
         ),
         actions: [
@@ -68,9 +73,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.event), label: 'RDV'),
-          NavigationDestination(icon: Icon(Icons.people_outline), label: 'Patients'),
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), label: 'Messages'),
+          NavigationDestination(icon: Icon(Icons.event_outlined), selectedIcon: Icon(Icons.event), label: 'RDV'),
+          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Patients'),
+          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Messages'),
         ],
       ),
     );
