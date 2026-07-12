@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
 import '../utils/form_validators.dart';
@@ -8,7 +9,6 @@ import 'doctor_home_screen.dart';
 import 'patient_home_screen.dart';
 import 'portal_screen.dart';
 import 'register_screen.dart';
-import 'verify_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final PortalType portal;
@@ -23,8 +23,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _username;
   late final TextEditingController _password;
+  final _otpCode = TextEditingController();
   bool _loading = false;
   String _error = '';
+  int _step = 1;
+  String _otpDevCode = '';
+  String _challengeId = '';
 
   @override
   void initState() {
@@ -42,15 +46,18 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _username.dispose();
     _password.dispose();
+    _otpCode.dispose();
     super.dispose();
   }
 
   Future<void> _login() async {
-    setState(() {
-      _error = '';
-    });
-    if (!_formKey.currentState!.validate()) {
+    setState(() => _error = '');
+    if (_step == 1 && !_formKey.currentState!.validate()) {
       setState(() => _error = 'Corrigez le champ signalé ci-dessous.');
+      return;
+    }
+    if (_step == 2 && !RegExp(r'^\d{6}$').hasMatch(_otpCode.text.trim())) {
+      setState(() => _error = 'Saisissez le code à 6 chiffres affiché.');
       return;
     }
 
@@ -60,7 +67,12 @@ class _LoginScreenState extends State<LoginScreen> {
         ? _username.text.trim().toLowerCase()
         : _username.text.trim();
 
-    final result = await AuthService.loginWithResult(loginId, _password.text);
+    final result = await AuthService.loginWithResult(
+      loginId,
+      _password.text,
+      loginOtp: _step == 2 ? _otpCode.text.trim() : null,
+      challengeId: _step == 2 ? _challengeId : null,
+    );
     if (!mounted) return;
 
     if (!result.ok) {
@@ -71,7 +83,19 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final user = result.data!['user'] as Map<String, dynamic>?;
+    final data = result.data!;
+    if (data['requires_otp'] == true && widget.portal == PortalType.patient) {
+      setState(() {
+        _step = 2;
+        _challengeId = (data['challenge_id'] as String?) ?? '';
+        _otpDevCode = (data['otp_dev_code'] as String?) ?? '';
+        _otpCode.text = _otpDevCode;
+        _loading = false;
+      });
+      return;
+    }
+
+    final user = data['user'] as Map<String, dynamic>?;
     if (widget.portal == PortalType.doctor && !AuthService.isDoctor(user)) {
       await AuthService.logout();
       setState(() {
@@ -132,99 +156,109 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      isDoctor ? 'Personnel hospitalier' : 'Espace patient',
+                      isPatient && _step == 2 ? 'Confirmation' : (isDoctor ? 'Personnel hospitalier' : 'Espace patient'),
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      isDoctor ? 'Connexion staff SGHL' : 'Rendez-vous, résultats, soins',
+                      isPatient && _step == 2
+                          ? 'Validez le code affiché pour entrer'
+                          : (isDoctor ? 'Connexion staff SGHL' : 'Rendez-vous, résultats, soins'),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey.shade600),
                     ),
                     const SizedBox(height: 24),
+                    if (_otpDevCode.isNotEmpty && _step == 2) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.teal.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('Code de connexion', style: TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 8),
+                            Text(
+                              _otpDevCode,
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 8,
+                                color: Colors.teal.shade900,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Non envoyé par email — saisissez-le ci-dessous',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     if (_error.isNotEmpty) ...[AppErrorBanner(message: _error), const SizedBox(height: 16)],
-                    SghlTextFormField(
-                      controller: _username,
-                      labelText: isPatient ? 'Email' : 'Identifiant',
-                      hintText: isPatient ? 'votre.email@exemple.com' : null,
-                      helperText: isPatient ? 'L\'adresse utilisée à l\'inscription' : null,
-                      required: true,
-                      keyboardType: isPatient ? TextInputType.emailAddress : TextInputType.text,
-                      autofillHints: isPatient ? const [AutofillHints.email] : const [AutofillHints.username],
-                      validator: (v) {
-                        if (isPatient) {
-                          final msg = FormValidators.loginIdentifier(v, isPatient: true);
-                          return msg.isEmpty ? null : msg;
-                        }
-                        if (v == null || v.trim().isEmpty) return 'Identifiant est obligatoire.';
-                        return null;
-                      },
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: 16),
-                    SghlTextFormField(
-                      controller: _password,
-                      labelText: 'Mot de passe',
-                      required: true,
-                      obscureText: true,
-                      autofillHints: const [AutofillHints.password],
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _login(),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Mot de passe est obligatoire.' : null,
-                    ),
+                    if (_step == 1) ...[
+                      SghlTextFormField(
+                        controller: _username,
+                        labelText: isPatient ? 'Email' : 'Identifiant',
+                        required: true,
+                        keyboardType: isPatient ? TextInputType.emailAddress : TextInputType.text,
+                        validator: isPatient ? FormValidators.email : FormValidators.required,
+                      ),
+                      const SizedBox(height: 12),
+                      SghlTextFormField(
+                        controller: _password,
+                        labelText: 'Mot de passe',
+                        required: true,
+                        obscureText: true,
+                        validator: FormValidators.required,
+                      ),
+                    ] else ...[
+                      SghlTextFormField(
+                        controller: _otpCode,
+                        labelText: 'Code à 6 chiffres',
+                        required: true,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: _loading ? null : _login,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: isDoctor ? const Color(0xFF0D9488) : const Color(0xFF475569),
-                      ),
-                      child: _loading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Text('Se connecter'),
+                      child: Text(_loading
+                          ? 'Patientez…'
+                          : (_step == 2 ? 'Confirmer la connexion' : 'Se connecter')),
                     ),
-                    const SizedBox(height: 16),
-                    if (isPatient)
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        children: [
-                          const Text('Pas encore de compte ? ', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          TextButton(
-                            onPressed: _loading
-                                ? null
-                                : () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                                    ),
-                            child: const Text('Créer un compte'),
-                          ),
-                          const Text(' · ', style: TextStyle(color: Colors.grey)),
-                          TextButton(
-                            onPressed: _loading
-                                ? null
-                                : () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const VerifyScreen()),
-                                    ),
-                            child: const Text('Code reçu ?'),
-                          ),
-                        ],
+                    if (_step == 2) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _step = 1;
+                          _otpDevCode = '';
+                          _challengeId = '';
+                          _otpCode.clear();
+                          _error = '';
+                        }),
+                        child: const Text('← Modifier email / mot de passe'),
                       ),
-                    TextButton(
-                      onPressed: _loading
-                          ? null
-                          : () => Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (_) => const PortalScreen()),
-                              ),
-                      child: const Text('← Changer d\'espace'),
-                    ),
+                    ],
+                    if (isPatient && _step == 1) ...[
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                        ),
+                        child: const Text('Créer un compte patient'),
+                      ),
+                    ],
                   ],
                 ),
               ),

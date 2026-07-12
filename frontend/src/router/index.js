@@ -27,9 +27,7 @@ const routes = [
   },
   {
     path: '/patient/verify',
-    name: 'patient-verify',
-    component: () => import('../views/patient/PatientVerifyView.vue'),
-    meta: { guest: true },
+    redirect: '/patient/login',
   },
   {
     path: '/patient/login',

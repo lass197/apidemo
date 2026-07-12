@@ -9,6 +9,8 @@ class LoginIn(Schema):
     username: str
     password: str
     mfa_code: Optional[str] = None
+    login_otp: Optional[str] = None
+    challenge_id: Optional[str] = None
 
 
 class PatientRegisterIn(Schema):
@@ -27,7 +29,6 @@ class RegisterPendingOut(Schema):
     email: str
     user_id: UUID
     otp_sent: bool
-    # Présent uniquement si SMTP non configuré (mode démo Render)
     otp_dev_code: Optional[str] = None
 
 
@@ -77,11 +78,16 @@ class UserOut(Schema):
 
 
 class TokenOut(Schema):
-    access_token: str
-    refresh_token: str
-    token_type: str
-    expires_in: int
-    user: UserOut
+    access_token: str = ""
+    refresh_token: str = ""
+    token_type: str = "Bearer"
+    expires_in: int = 0
+    user: Optional[UserOut] = None
+    # Connexion patient : étape code à l'écran
+    requires_otp: bool = False
+    otp_dev_code: Optional[str] = None
+    challenge_id: Optional[str] = None
+    detail: str = ""
 
 
 class RefreshOut(Schema):

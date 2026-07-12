@@ -262,9 +262,10 @@ class AuditLog(models.Model):
 
 
 class EmailOTP(TimestampedModel):
-    """Code OTP email à usage unique (inscription patient, etc.)."""
+    """Code OTP à usage unique (inscription legacy, confirmation de connexion patient)."""
 
     REGISTRATION = "REGISTRATION"
+    LOGIN = "LOGIN"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_otps")
@@ -275,5 +276,5 @@ class EmailOTP(TimestampedModel):
     attempts = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
-        verbose_name = "code OTP email"
+        verbose_name = "code OTP"
         ordering = ["-created_at"]

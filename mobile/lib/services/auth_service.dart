@@ -23,18 +23,38 @@ class AuthApiResult {
 class AuthService {
   static String get _baseUrl => ApiConfig.baseUrl;
 
-  static Future<AuthApiResult> loginWithResult(String username, String password) async {
+  static Future<AuthApiResult> loginWithResult(
+    String username,
+    String password, {
+    String? loginOtp,
+    String? challengeId,
+  }) async {
     try {
+      final body = <String, dynamic>{
+        'username': username,
+        'password': password,
+      };
+      if (loginOtp != null && loginOtp.isNotEmpty) {
+        body['login_otp'] = loginOtp;
+        body['challenge_id'] = challengeId;
+      }
       final response = await ApiHttp.post(
         Uri.parse('$_baseUrl/auth/login/'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
+        body: jsonEncode(body),
       );
       if (response.statusCode != 200) {
         return AuthApiResult.failure(parseApiDetail(response, 'Connexion échouée')!);
       }
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      await TokenStorage.write('access_token', data['access_token'] as String);
+      if (data['requires_otp'] == true) {
+        return AuthApiResult.success(data);
+      }
+      final token = data['access_token'] as String?;
+      if (token == null || token.isEmpty) {
+        return AuthApiResult.failure('Réponse de connexion invalide.');
+      }
+      await TokenStorage.write('access_token', token);
       await TokenStorage.write('user', jsonEncode(data['user']));
       return AuthApiResult.success(data);
     } on ApiHttpException catch (e) {
@@ -77,7 +97,14 @@ class AuthService {
       if (response.statusCode != 200) {
         return AuthApiResult.failure(parseApiDetail(response, 'Inscription impossible.')!);
       }
-      return AuthApiResult.success(jsonDecode(response.body) as Map<String, dynamic>);
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = data['access_token'] as String?;
+      if (token != null && token.isNotEmpty) {
+        await TokenStorage.write('access_token', token);
+        await TokenStorage.write('user', jsonEncode(data['user']));
+        await TokenStorage.write('portal', PortalType.patient.name);
+      }
+      return AuthApiResult.success(data);
     } on ApiHttpException catch (e) {
       return AuthApiResult.failure(e.message);
     }

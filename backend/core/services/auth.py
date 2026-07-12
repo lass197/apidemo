@@ -64,7 +64,15 @@ def _log_login(user: User | None, username: str, status: str, reason: str = ""):
 
 
 
-def login(username: str, password: str, mfa_code: str | None = None) -> dict:
+def login(
+    username: str,
+    password: str,
+    mfa_code: str | None = None,
+    *,
+    login_otp: str | None = None,
+    challenge_id: str | None = None,
+    skip_patient_login_otp: bool = False,
+) -> dict:
     request = get_current_request()
     ip = get_client_ip(request) if request else "unknown"
     login_id = username.strip().lower()
@@ -105,9 +113,32 @@ def login(username: str, password: str, mfa_code: str | None = None) -> dict:
         if not mfa_code or not verify_mfa_code(user.mfa_secret, mfa_code):
             raise ValueError("Code MFA requis ou invalide.")
 
-    if Role.PATIENT in user.get_role_codes() and not user.email_verified:
-        raise ValueError("Email non vérifié. Saisissez le code reçu par email ou demandez un renvoi.")
+    roles = user.get_role_codes()
+    is_patient = Role.PATIENT in roles
 
+    # Connexion patient : code à l'écran (pas d'email), sauf inscription qui skip
+    if is_patient and not skip_patient_login_otp:
+        from core.services.email_otp import issue_login_otp, verify_login_otp
+
+        if not login_otp or not challenge_id:
+            code, challenge = issue_login_otp(user)
+            return {
+                "requires_otp": True,
+                "otp_dev_code": code,
+                "challenge_id": challenge,
+                "detail": "Saisissez le code affiché pour confirmer votre connexion.",
+                "access_token": "",
+                "refresh_token": "",
+                "token_type": "Bearer",
+                "expires_in": 0,
+                "user": _user_payload(user),
+            }
+        verify_login_otp(challenge_id=challenge_id, code=login_otp, user=user)
+
+    return _finalize_login(user, username)
+
+
+def _finalize_login(user: User, username: str) -> dict:
     request = get_current_request()
     if request:
         try:
@@ -132,6 +163,10 @@ def login(username: str, password: str, mfa_code: str | None = None) -> dict:
     )
 
     return {
+        "requires_otp": False,
+        "otp_dev_code": None,
+        "challenge_id": None,
+        "detail": "",
         "access_token": access,
         "refresh_token": refresh_raw,
         "token_type": "Bearer",

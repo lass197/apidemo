@@ -27,15 +27,15 @@ from core.services.rate_limit import is_rate_limited
 router = Router(tags=["Authentification"])
 
 
-@router.post("/register/patient/", response=RegisterPendingOut)
+@router.post("/register/patient/", response=TokenOut)
 def register_patient_account(request, payload: PatientRegisterIn):
-    """Inscription patient — envoi d'un code OTP email (6 chiffres) avant activation."""
+    """Inscription patient — accès immédiat (sans OTP email)."""
     ip = get_client_ip(request) or "unknown"
     if is_rate_limited(f"register:{ip}", limit=10, window=3600):
         raise HttpError(429, "Trop de tentatives d'inscription. Réessayez plus tard.")
 
     try:
-        user, patient, _ = register_patient(
+        user, _patient, _ = register_patient(
             email=payload.email,
             password=payload.password,
             first_name=payload.first_name,
@@ -45,40 +45,30 @@ def register_patient_account(request, payload: PatientRegisterIn):
             phone=payload.phone,
             username=payload.username,
         )
-        code, otp_sent = issue_registration_otp(user)
+        # Connexion directe après inscription (pas de code OTP)
+        return login(user.username, payload.password, skip_patient_login_otp=True)
     except ValueError as exc:
         raise HttpError(400, str(exc)) from exc
     except Exception as exc:
         raise HttpError(500, f"Inscription impossible: {exc}") from exc
 
-    return {
-        "detail": (
-            "Compte créé. Saisissez le code à 6 chiffres reçu par email."
-            if otp_sent
-            else "Compte créé. L'email n'est pas configuré sur le serveur : utilisez le code affiché ci-dessous."
-        ),
-        "email": user.email,
-        "user_id": user.id,
-        "otp_sent": otp_sent,
-        "otp_dev_code": None if otp_sent else code,
-    }
-
 
 @router.post("/register/patient/verify-otp/", response=TokenOut)
 def verify_patient_registration(request, payload: VerifyEmailOtpIn):
-    """Valide le code OTP et active le compte patient."""
+    """Legacy : active un ancien compte en attente de vérification email."""
     ip = get_client_ip(request) or "unknown"
     if is_rate_limited(f"verify-otp:{ip}", limit=20, window=3600):
         raise HttpError(429, "Trop de tentatives. Réessayez plus tard.")
     try:
         user = verify_registration_otp(payload.email, payload.code)
-        return login(user.username, payload.password)
+        return login(user.username, payload.password, skip_patient_login_otp=True)
     except ValueError as exc:
         raise HttpError(400, str(exc)) from exc
 
 
 @router.post("/register/patient/resend-otp/", response=ResendOtpOut)
 def resend_patient_otp(request, payload: ResendOtpIn):
+    """Legacy : renvoi OTP inscription (comptes non vérifiés uniquement)."""
     ip = get_client_ip(request) or "unknown"
     if is_rate_limited(f"resend-otp:{ip}", limit=5, window=3600):
         raise HttpError(429, "Trop de demandes. Réessayez plus tard.")
@@ -102,7 +92,13 @@ def auth_login(request, payload: LoginIn):
     from django.db import OperationalError
 
     try:
-        return login(payload.username, payload.password, payload.mfa_code)
+        return login(
+            payload.username,
+            payload.password,
+            payload.mfa_code,
+            login_otp=payload.login_otp,
+            challenge_id=payload.challenge_id,
+        )
     except ValueError as exc:
         raise HttpError(401, str(exc)) from exc
     except OperationalError as exc:
@@ -142,7 +138,7 @@ def mfa_confirm(request, payload: MfaConfirmIn):
     if not request.auth.mfa_secret:
         raise HttpError(400, "Configurez d'abord le MFA.")
     if not verify_mfa_code(request.auth.mfa_secret, payload.code):
-        raise HttpError(400, "Code invalide.")
+        raise HttpError(400, "Code MFA invalide.")
     request.auth.mfa_enabled = True
     request.auth.save(update_fields=["mfa_enabled"])
     return {"detail": "MFA activé."}

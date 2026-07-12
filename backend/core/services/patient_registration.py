@@ -94,7 +94,8 @@ def register_patient(
             existing_user.first_name = first_name
             existing_user.last_name = last_name
             existing_user.phone = phone
-            existing_user.save(update_fields=["password", "first_name", "last_name", "phone"])
+            existing_user.email_verified = True
+            existing_user.save(update_fields=["password", "first_name", "last_name", "phone", "email_verified"])
 
             if existing_patient:
                 existing_patient.first_name = first_name
@@ -150,7 +151,7 @@ def register_patient(
             last_name=last_name,
             phone=phone,
             is_staff=False,
-            email_verified=False,
+            email_verified=True,
         )
         UserRole.objects.create(user=user, role=role)
 

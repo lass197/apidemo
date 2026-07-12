@@ -17,13 +17,9 @@ import { apiErrorDetail, mapApiErrorToFields } from '../../composables/apiErrors
 
 const auth = useAuthStore()
 const router = useRouter()
-const step = ref(1)
 const loading = ref(false)
 const error = ref('')
 const fieldErrors = ref({})
-const pendingEmail = ref('')
-const otpDevCode = ref('')
-const otpSent = ref(false)
 
 const form = ref({
   email: '',
@@ -35,7 +31,6 @@ const form = ref({
   gender: 'F',
   phone: '',
   username: '',
-  otpCode: '',
 })
 
 function onNamePaste(field, event) {
@@ -66,7 +61,7 @@ function validatePhoneField() {
   return !msg
 }
 
-function validateStep1() {
+function validateForm() {
   fieldErrors.value = validateFields({
     first_name: () => validators.personName(form.value.first_name, 'Prénom'),
     last_name: () => validators.personName(form.value.last_name, 'Nom'),
@@ -83,7 +78,7 @@ function validateStep1() {
 
 async function submitRegister() {
   error.value = ''
-  if (!validateStep1()) {
+  if (!validateForm()) {
     error.value = 'Corrigez les champs signalés ci-dessous.'
     return
   }
@@ -101,62 +96,18 @@ async function submitRegister() {
     if (form.value.username.trim()) payload.username = form.value.username.trim().toLowerCase()
 
     const { data } = await api.post('/auth/register/patient/', payload)
-    pendingEmail.value = data.email
-    otpSent.value = !!data.otp_sent
-    otpDevCode.value = data.otp_dev_code || ''
-    if (otpDevCode.value) form.value.otpCode = otpDevCode.value
-    step.value = 2
-  } catch (e) {
-    const detail = apiErrorDetail(e, 'Inscription impossible.')
-    if (e.response?.status === 502 || e.code === 'ERR_NETWORK') {
-      error.value = 'Serveur indisponible (502). Attendez une minute (démarrage Render) puis réessayez.'
-    } else {
-      fieldErrors.value = { ...fieldErrors.value, ...mapApiErrorToFields(detail) }
-      error.value = Object.keys(mapApiErrorToFields(detail)).length ? 'Corrigez les champs signalés ci-dessous.' : detail
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-async function verifyOtp() {
-  error.value = ''
-  if (!/^\d{6}$/.test(form.value.otpCode.trim())) {
-    error.value = 'Saisissez le code à 6 chiffres reçu par email.'
-    return
-  }
-  loading.value = true
-  try {
-    const { data } = await api.post('/auth/register/patient/verify-otp/', {
-      email: pendingEmail.value,
-      code: form.value.otpCode.trim(),
-      password: form.value.password,
-    })
     auth.setSession(data, 'patient')
     router.push('/patient')
   } catch (e) {
-    const detail = apiErrorDetail(e, 'Code invalide.')
-    if (detail.toLowerCase().includes('email')) {
-      fieldErrors.value = { ...fieldErrors.value, email: detail }
+    if (e.response?.status === 502 || e.code === 'ERR_NETWORK') {
+      error.value = 'Serveur indisponible (502). Attendez une minute puis réessayez.'
+    } else {
+      const detail = apiErrorDetail(e, 'Inscription impossible.')
+      fieldErrors.value = { ...fieldErrors.value, ...mapApiErrorToFields(detail) }
+      error.value = Object.keys(mapApiErrorToFields(detail)).length
+        ? 'Corrigez les champs signalés ci-dessous.'
+        : detail
     }
-    error.value = detail
-  } finally {
-    loading.value = false
-  }
-}
-
-async function resendOtp() {
-  error.value = ''
-  loading.value = true
-  try {
-    const { data } = await api.post('/auth/register/patient/resend-otp/', { email: pendingEmail.value })
-    otpSent.value = !!data.otp_sent
-    otpDevCode.value = data.otp_dev_code || ''
-    if (otpDevCode.value) form.value.otpCode = otpDevCode.value
-    error.value = ''
-    alert(data.detail || (otpDevCode.value ? `Nouveau code : ${otpDevCode.value}` : 'Un nouveau code a été envoyé.'))
-  } catch (e) {
-    error.value = apiErrorDetail(e, 'Renvoi impossible.')
   } finally {
     loading.value = false
   }
@@ -168,13 +119,11 @@ async function resendOtp() {
     <div class="w-full max-w-lg">
       <div class="text-center mb-6 text-white">
         <router-link to="/" class="text-xs text-white/50 hover:text-white/80">← Accueil SGHL</router-link>
-        <h1 class="text-2xl font-bold mt-4">{{ step === 1 ? 'Créer un compte patient' : 'Vérification email' }}</h1>
-        <p class="text-sm text-white/70 mt-1">
-          {{ step === 1 ? 'Email unique — accès rendez-vous, résultats et plan de soins' : `Code envoyé à ${pendingEmail}` }}
-        </p>
+        <h1 class="text-2xl font-bold mt-4">Créer un compte patient</h1>
+        <p class="text-sm text-white/70 mt-1">Accès immédiat à vos rendez-vous, résultats et soins</p>
       </div>
 
-      <form v-if="step === 1" @submit.prevent="submitRegister" class="card p-6 sm:p-8 shadow-2xl space-y-4">
+      <form @submit.prevent="submitRegister" class="card p-6 sm:p-8 shadow-2xl space-y-4">
         <AlertBanner v-if="error" type="error">{{ error }}</AlertBanner>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Prénom" :error="fieldErrors.first_name" required>
@@ -184,7 +133,7 @@ async function resendOtp() {
             <input v-model="form.last_name" class="form-input" @keydown="blockDigitsInName" @input="stripDigitsFromName('last_name')" @paste="onNamePaste('last_name', $event)" />
           </FormField>
         </div>
-        <FormField label="Email" :error="fieldErrors.email" required hint="Utilisé pour la connexion et le code de vérification">
+        <FormField label="Email" :error="fieldErrors.email" required hint="Utilisé pour la connexion">
           <input
             v-model="form.email"
             type="email"
@@ -220,46 +169,13 @@ async function resendOtp() {
             <input v-model="form.passwordConfirm" type="password" class="form-input" autocomplete="new-password" />
           </FormField>
         </div>
-        <button type="submit" :disabled="loading" class="btn-primary w-full">{{ loading ? 'Création…' : 'Continuer' }}</button>
+        <button type="submit" :disabled="loading" class="btn-primary w-full">
+          {{ loading ? 'Création…' : 'Créer mon compte' }}
+        </button>
         <p class="text-center text-sm text-slate-500">
           Déjà inscrit ?
           <router-link to="/patient/login" class="text-primary font-medium hover:underline">Se connecter</router-link>
-          ·
-          <router-link to="/patient/verify" class="text-primary font-medium hover:underline">Code déjà reçu ?</router-link>
         </p>
-      </form>
-
-      <form v-else @submit.prevent="verifyOtp" class="card p-6 sm:p-8 shadow-2xl space-y-4">
-        <AlertBanner v-if="error" type="error">{{ error }}</AlertBanner>
-        <AlertBanner v-if="otpDevCode" type="success">
-          Mode démo : aucun email SMTP configuré. Votre code est
-          <strong class="font-mono text-lg tracking-widest">{{ otpDevCode }}</strong>
-        </AlertBanner>
-        <div class="text-center py-2">
-          <span class="text-4xl">📧</span>
-          <p class="text-sm text-slate-600 mt-3">
-            <template v-if="otpSent">
-              Entrez le code à <strong>6 chiffres</strong> reçu par email pour activer votre compte.
-            </template>
-            <template v-else>
-              Entrez le code à <strong>6 chiffres</strong> affiché ci-dessus pour activer votre compte.
-            </template>
-          </p>
-        </div>
-        <FormField label="Code de vérification" required>
-          <input
-            v-model="form.otpCode"
-            class="form-input text-center text-2xl tracking-[0.5em] font-mono"
-            maxlength="6"
-            inputmode="numeric"
-            pattern="[0-9]*"
-            placeholder="000000"
-            autocomplete="one-time-code"
-          />
-        </FormField>
-        <button type="submit" :disabled="loading" class="btn-primary w-full">{{ loading ? 'Vérification…' : 'Activer mon compte' }}</button>
-        <button type="button" class="btn-secondary w-full text-sm" :disabled="loading" @click="resendOtp">Renvoyer le code</button>
-        <button type="button" class="text-sm text-slate-500 hover:text-slate-700 w-full" @click="step = 1">← Modifier mes informations</button>
       </form>
     </div>
   </div>
