@@ -288,7 +288,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   labelText: isPatient ? 'Email' : 'Identifiant',
                                   required: true,
                                   keyboardType: isPatient ? TextInputType.emailAddress : TextInputType.text,
-                                  validator: isPatient ? FormValidators.email : FormValidators.required,
+                                  validator: (v) {
+                                    if (isPatient) {
+                                      final msg = FormValidators.email(v, required: true);
+                                      return msg.isEmpty ? null : msg;
+                                    }
+                                    return FormValidators.required(v, 'Identifiant');
+                                  },
                                 ),
                                 const SizedBox(height: 14),
                                 SghlTextFormField(
@@ -296,7 +302,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   labelText: 'Mot de passe',
                                   required: true,
                                   obscureText: true,
-                                  validator: FormValidators.required,
+                                  validator: (v) => FormValidators.required(v, 'Mot de passe'),
                                 ),
                               ] else ...[
                                 SghlTextFormField(

@@ -15,7 +15,7 @@ mobile/.dart_tool
 mobile/build
 mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
-mobile/dist
+# mobile/dist est versionné (build Flutter Web précompilé pour Render)
 .git
 .github
 .pytest_cache

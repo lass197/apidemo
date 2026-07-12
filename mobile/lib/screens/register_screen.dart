@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../data/phone_countries.dart';
 import '../services/auth_service.dart';
 import '../theme/sghl_theme.dart';
 import '../utils/form_validators.dart';
@@ -32,14 +31,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _phone = '';
   bool _loading = false;
   String _error = '';
-  List<PhoneCountry> _countries = [];
 
   @override
   void initState() {
     super.initState();
-    PhoneCountries.load().then((c) {
-      if (mounted) setState(() => _countries = c);
-    });
   }
 
   @override
@@ -202,7 +197,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 inputFormatters: [
                                   FilteringTextInputFormatter.allow(RegExp(r"[A-Za-zÀ-ÿ\s\-']")),
                                 ],
-                                validator: (v) => FormValidators.personName(v, 'Prénom'),
+                                validator: (v) {
+                                  final msg = FormValidators.personName(v, 'Prénom');
+                                  return msg.isEmpty ? null : msg;
+                                },
                               ),
                               const SizedBox(height: 12),
                               SghlTextFormField(
@@ -212,7 +210,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 inputFormatters: [
                                   FilteringTextInputFormatter.allow(RegExp(r"[A-Za-zÀ-ÿ\s\-']")),
                                 ],
-                                validator: (v) => FormValidators.personName(v, 'Nom'),
+                                validator: (v) {
+                                  final msg = FormValidators.personName(v, 'Nom');
+                                  return msg.isEmpty ? null : msg;
+                                },
                               ),
                               const SizedBox(height: 12),
                               SghlTextFormField(
@@ -220,7 +221,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 labelText: 'Email',
                                 required: true,
                                 keyboardType: TextInputType.emailAddress,
-                                validator: FormValidators.email,
+                                validator: (v) {
+                                  final msg = FormValidators.email(v, required: true);
+                                  return msg.isEmpty ? null : msg;
+                                },
                               ),
                               const SizedBox(height: 12),
                               SghlTextFormField(
@@ -249,8 +253,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 12),
                               PhoneInput(
-                                countries: _countries,
-                                onChanged: (v) => _phone = v,
+                                value: _phone,
+                                onChanged: (v) => setState(() => _phone = v),
                               ),
                               const SizedBox(height: 12),
                               SghlTextFormField(
@@ -258,7 +262,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 labelText: 'Mot de passe',
                                 required: true,
                                 obscureText: true,
-                                validator: FormValidators.password,
+                                validator: (v) {
+                                  final msg = FormValidators.password(v);
+                                  return msg.isEmpty ? null : msg;
+                                },
                               ),
                               const SizedBox(height: 12),
                               SghlTextFormField(

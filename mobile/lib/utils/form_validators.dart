@@ -3,6 +3,12 @@ class FormValidators {
   static final _personNameRe = RegExp(r"^[a-zA-ZÀ-ÿ\s'-]+$");
   static final _emailRe = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 
+  /// Champ obligatoire (compatible TextFormField : null = OK).
+  static String? required(String? value, [String field = 'Ce champ']) {
+    if (value == null || value.trim().isEmpty) return '$field est obligatoire.';
+    return null;
+  }
+
   static String personName(String? value, [String field = 'Ce champ']) {
     final v = (value ?? '').trim();
     if (v.isEmpty) return '$field est obligatoire.';
